@@ -1,0 +1,47 @@
+data_triedge
+_audit_creation_date              2024-11-12
+_audit_creation_method            'MOFbuilder'
+_symmetry_space_group_name_H-M    'P1'
+_symmetry_Int_Tables_number       1
+_symmetry_cell_setting            triclinic
+loop_
+_symmetry_equiv_pos_as_xyz
+  x,y,z
+_cell_length_a                    50
+_cell_length_b                    50
+_cell_length_c                    50
+_cell_angle_alpha                 90
+_cell_angle_beta                  90
+_cell_angle_gamma                 90
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+H1         H    0.9628983267    0.9977172549    0.9361137654   0.00000  Uiso   1.00       -0.000000
+H2         H    0.9627803267    0.9797852549    0.8900437654   0.00000  Uiso   1.00       -0.000000
+H3         H    0.0371923267    0.9402352549    0.9052497654   0.00000  Uiso   1.00       -0.000000
+H4         H    0.0373083267    0.9581692549    0.9513197654   0.00000  Uiso   1.00       -0.000000
+X5         C    0.0001103267    0.9790592549    0.9465857654   0.00000  Uiso   1.00       -0.000000
+C6         C    0.9791583267    0.9851352549    0.9293577654   0.00000  Uiso   1.00       -0.000000
+C7         C    0.9790923267    0.9750532549    0.9034557654   0.00000  Uiso   1.00       -0.000000
+X8         C    0.9999783267    0.9588932549    0.8947777654   0.00000  Uiso   1.00       -0.000000
+C9         C    0.0209303267    0.9528172549    0.9120037654   0.00000  Uiso   1.00       -0.000000
+C10        C    0.0209963267    0.9628992549    0.9379077654   0.00000  Uiso   1.00       -0.000000
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_distance
+_geom_bond_site_symmetry_2
+_ccdc_geom_bond_type
+H1           C6 0.022       .   S
+H2           C7 0.022       .   S
+H3           C9 0.022       .   S
+H4          C10 0.022       .   S
+X5           C6 0.028       .   A
+X5          C10 0.028       .   A
+C6           C7 0.028       .   S
+C7           X8 0.028       .   A
+X8           C9 0.028       .   A
+C9          C10 0.028       .   S

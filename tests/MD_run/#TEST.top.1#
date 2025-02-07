@@ -1,0 +1,54 @@
+[ defaults ]
+; nbfunc        comb-rule       gen-pairs       fudgeLJ fudgeQQ
+1               2               yes             0.5          0.83333333  
+
+
+[ atomtypes ]
+; name    at.num    mass    charge ptype  sigma      epsilon
+OW        o           15.9994  0.00000   A     0.317796456   0.652143528  ;tip3p
+HW        h           1.00800  0.00000   A     0.00000e+00   0.00000e+00  ;tip3p
+ZA           ZA  67.224000  0.00000000  A     0.16463808      220.72608 ;ZR1
+D1           D1   3.000000  0.00000000  A              0              0 ;ZR1
+D2           D2   3.000000  0.00000000  A              0              0 ;ZR1
+D3           D3   3.000000  0.00000000  A              0              0 ;ZR1
+D4           D4   3.000000  0.00000000  A              0              0 ;ZR1
+D5           D5   3.000000  0.00000000  A              0              0 ;ZR1
+D6           D6   3.000000  0.00000000  A              0              0 ;ZR1
+D7           D7   3.000000  0.00000000  A              0              0 ;ZR1
+D8           D8   3.000000  0.00000000  A              0              0 ;ZR1
+OS           OS  16.000000  0.00000000  A     0.31560978      0.3037584 ;OM2
+c              6  12.01000   0.00000     A     3.31521e-01   4.13379e-01 ;NDI  ;NDR  ;DMF
+o              8  16.00000   0.00000     A     3.04812e-01   6.12119e-01 ;NDI  ;NDR  ;DMF
+oh             6  16.00000   0.00000     A     3.24287e-01   3.89112e-01 ;NDI  ;NDR
+ho             1  1.008000   0.00000     A     5.37925e-02   1.96648e-02 ;NDI  ;NDR
+ha             1  1.008000   0.00000     A     2.62548e-01   6.73624e-02 ;NDI  ;NDR
+nb             7  14.01000   0.00000     A     3.38417e-01   3.93714e-01 ;NDI  ;NDR
+ca             6  12.01000   0.00000     A     3.31521e-01   4.13379e-01 ;NDI  ;NDR
+Cco       c1          0.00000  0.00000   A     3.47896e-01   6.67766e-01 ;CO2
+Oco       o           0.00000  0.00000   A     3.04812e-01   6.12119e-01 ;CO2
+HO           HO   1.008000  0.00000     A     5.37925e-02   1.96648e-02 ;OH
+O             O  16.00000   0.00000     A     3.04812e-01   6.12119e-01 ;OH
+ c3       c3          0.00000  0.00000   A     3.39771e-01   4.51035e-01
+ hc       hc          0.00000  0.00000   A     2.60018e-01   8.70272e-02
+
+
+#include "itps/tip3p.itp"
+#include "itps/Zr.itp"
+#include "itps/O.itp"
+#include "itps/EDGE.itp"
+#include "itps/CO2.itp"
+#include "itps/HO.itp"
+#include "itps/TERM.itp"
+
+
+[ system ]
+; Name
+MOF
+
+[ molecules ]
+; Compound     #mols
+EDG                36
+HO                 56
+MET                84
+O                  56
+TER                96

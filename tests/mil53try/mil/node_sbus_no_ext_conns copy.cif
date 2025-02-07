@@ -1,0 +1,39 @@
+
+#======================================================================
+# CRYSTAL DATA
+#----------------------------------------------------------------------
+data_VESTA_phase_1
+
+_chemical_name_common                  ''
+_cell_length_a                         16.733000
+_cell_length_b                         13.038000
+_cell_length_c                         6.812000
+_cell_angle_alpha                      90.000000
+_cell_angle_beta                       90.000000
+_cell_angle_gamma                      90.000000
+_cell_volume                           1486.138936
+_space_group_name_H-M_alt              'P 1'
+_space_group_IT_number                 1
+
+loop_
+_space_group_symop_operation_xyz
+   'x, y, z'
+
+loop_
+   _atom_site_label
+   _atom_site_occupancy
+   _atom_site_fract_x
+   _atom_site_fract_y
+   _atom_site_fract_z
+   _atom_site_adp_type
+   _atom_site_U_iso_or_equiv
+   _atom_site_type_symbol
+   Cr0        Cr   0.750000        0.250000        0.750000       0.00000  Uiso   1.00       -0.000000
+   X8         O    0.668000        0.161000        0.833000       0.00000  Uiso   1.00       -0.000000
+   X13        O    0.832000        0.161000        0.833000       0.00000  Uiso   1.00       -0.000000
+   X14        O    0.750000        0.314000        0.000000       0.00000  Uiso   1.00       -0.000000
+   X15        O    0.750000        0.186000        0.500000       0.00000  Uiso   1.00       -0.000000
+   X19        O    0.668000        0.339000        0.667000       0.00000  Uiso   1.00       -0.000000
+   X25        O    0.832000        0.339000        0.667000       0.00000  Uiso   1.00       -0.000000
+   H33        H    0.750000        0.389000        0.000000       0.00000  Uiso   1.00       -0.000000
+   H34        H    0.750000        0.111000        0.500000       0.00000  Uiso   1.00       -0.000000

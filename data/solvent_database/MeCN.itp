@@ -1,0 +1,51 @@
+[ atomtypes ]
+; name    at.num    mass    charge ptype  sigma      epsilon
+c1m          c1   0.00000   0.00000     A     3.47896e-01   6.67766e-01 ;MeCN
+c3m          c3   0.00000   0.00000     A     3.39771e-01   4.51035e-01 ;MeCN
+hcm          hc   0.00000   0.00000     A     2.60018e-01   8.70272e-02 ;MeCN
+n1m          n1   0.00000   0.00000     A     3.27352e-01   4.59403e-01 ;MeCN
+
+
+[ moleculetype ]
+;name            nrexcl
+MCN                  3
+
+[ atoms ]
+;   nr  type  resi  res  atom  cgnr     charge       mass
+     1    c1m    1   MCN    C1    1     0.42330000   12.00000 ; qtot  0.423  equiv. c1_00
+     2    n1m    1   MCN     N    2    -0.46622000   14.00307 ; qtot -0.043  equiv. n1_00
+     3    c3m    1   MCN    C2    3    -0.46619000   12.00000 ; qtot -0.509  equiv. c3_00
+     4    hcm    1   MCN    H1    4     0.16970333    1.00782 ; qtot -0.339  equiv. hc_00
+     5    hcm    1   MCN    H2    5     0.16970333    1.00782 ; qtot -0.170  equiv. hc_00
+     6    hcm    1   MCN    H3    6     0.16970333    1.00782 ; qtot  0.000  equiv. hc_00
+
+[ bonds ]
+;   ai     aj    funct       r           k_r
+     1      2      1    1.1604e-01    7.4601e+05 ; c1-n1  
+     1      3      1    1.4605e-01    2.4761e+05 ; c1-c3  
+     3      4      1    1.0946e-01    3.1455e+05 ; c3-hc  
+     3      5      1    1.0943e-01    3.1455e+05 ; c3-hc  
+     3      6      1    1.0941e-01    3.1455e+05 ; c3-hc  
+
+[ pairs ]
+;   ai     aj    funct
+     2      4      1
+     2      5      1
+     2      6      1
+
+[ angles ]
+;   ai     aj     ak    funct     theta       k_theta
+     1      3      4      1    1.1021e+02    4.0920e+02 ; c1-c3-hc 
+     1      3      5      1    1.1023e+02    4.0920e+02 ; c1-c3-hc 
+     1      3      6      1    1.1020e+02    4.0920e+02 ; c1-c3-hc 
+     2      1      3      1    1.7994e+02    6.1254e+02 ; c3-c1-n1 
+     4      3      5      1    1.0868e+02    3.2635e+02 ; hc-c3-hc 
+     4      3      6      1    1.0871e+02    3.2635e+02 ; hc-c3-hc 
+     5      3      6      1    1.0876e+02    3.2635e+02 ; hc-c3-hc 
+
+[ dihedrals ]
+; propers
+;   ai     aj     ak     al    funct    phase     k_d      n
+     2      1      3      4      9     180.00    0.00000   2 ; X -c1-c3-X  
+     2      1      3      5      9     180.00    0.00000   2 ; X -c1-c3-X  
+     2      1      3      6      9     180.00    0.00000   2 ; X -c1-c3-X  

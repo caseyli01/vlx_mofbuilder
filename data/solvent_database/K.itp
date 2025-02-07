@@ -1,0 +1,12 @@
+[ atomtypes ]
+; name    at.num    mass    charge ptype  sigma      epsilon
+Ki            19  39.100000  0.00000000  A     0.31092365     0.71203622 ;K
+
+[ moleculetype ]
+; Name            nrexcl
+K          3
+
+[ atoms ]
+;   nr       type  resnr residue  atom   cgnr    charge       mass  typeB    chargeB      massB
+; residue    1 K rtp K q 1.0
+    1         Ki      1      K      K      1 1.00000000  39.100000   ; qtot 1.000000
