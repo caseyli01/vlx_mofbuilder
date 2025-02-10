@@ -1,6 +1,8 @@
 import re
 import os
+import datetime
 import py3Dmol as p3d
+import numpy as np
 
 def tempgro(output,all_array):
         atoms_number = len(all_array)
@@ -185,3 +187,47 @@ def outxyz(output,all_array,sc_unit_cell):
 #            fp.writelines(newgro)
 #            
 #
+
+def write_cif_nobond(placed_all, params, cifname,unit_cell):
+	a,b,c,alpha,beta,gamma = params
+	os.makedirs('output_cifs',exist_ok=True)
+
+	opath = os.path.join('output_cifs', cifname)
+	
+	with open(opath, 'w') as new_cif:
+		new_cif.write('data_' + cifname[0:-4] + '\n')
+		new_cif.write('_audit_creation_date              ' + datetime.datetime.today().strftime('%Y-%m-%d') + '\n')
+		new_cif.write("_audit_creation_method            'MOFbuilder_1.0'" + '\n')
+		new_cif.write("_symmetry_space_group_name_H-M    'P1'" + '\n')
+		new_cif.write('_symmetry_Int_Tables_number       1' + '\n')
+		new_cif.write('_symmetry_cell_setting            triclinic' + '\n')
+		new_cif.write('loop_' + '\n')
+		new_cif.write('_symmetry_equiv_pos_as_xyz' + '\n')
+		new_cif.write('  x,y,z' + '\n')
+		new_cif.write('_cell_length_a                    ' + str(a) + '\n')
+		new_cif.write('_cell_length_b                    ' + str(b) + '\n')
+		new_cif.write('_cell_length_c                    ' + str(c) + '\n')
+		new_cif.write('_cell_angle_alpha                 ' + str(alpha) + '\n')
+		new_cif.write('_cell_angle_beta                  ' + str(beta) + '\n')
+		new_cif.write('_cell_angle_gamma                 ' + str(gamma) + '\n')
+		new_cif.write('loop_' + '\n')
+		new_cif.write('_atom_site_label' + '\n')
+		new_cif.write('_atom_site_type_symbol' + '\n')
+		new_cif.write('_atom_site_fract_x' + '\n')
+		new_cif.write('_atom_site_fract_y' + '\n')
+		new_cif.write('_atom_site_fract_z' + '\n')
+		
+
+		for line in placed_all:
+			atom = line[0]
+			f_coords = list(map(float, line[1:4]))
+			c_coords = np.dot(np.linalg.inv(unit_cell), f_coords)
+			new_cif.write('{:7} {:>4} {:>15.10f} {:>15.10f} {:>15.10f}'.format(
+				atom, 
+				re.sub('[0-9]', '', atom),  #atom type
+				np.round(c_coords[0], 10), 
+				np.round(c_coords[1], 10), 
+				np.round(c_coords[2], 10)))
+			new_cif.write('\n')
+
+		new_cif.write('loop_' + '\n')

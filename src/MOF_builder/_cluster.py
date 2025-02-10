@@ -13,27 +13,7 @@ def placed_arr(placed_all):
     res_id=np.unique(placed_all_arr[:,6]).astype(int)
     return placed_all_arr,res_id
 
-def fetch_node_withidx(placed_node,idx_list):
-    res_id_list = [i+1 for i in idx_list ]
-    res=[]
-    for n in res_id_list:
-        res.append(placed_node[placed_node[:,6]==n])
-    return np.vstack(res)
 
-    
-def fetch_edge_withidx(placed_edge,idx_list):
-    res_id_list = [-1*i-1 for i in idx_list ]
-    res=[]
-    for n in res_id_list:
-        res.append(placed_edge[placed_edge[:,6]==n])
-    return np.vstack(res)
-
-def fetch_edge_withidx_sep(placed_edge,idx_list):
-    res_id_list = [-1*i-1 for i in idx_list ]
-    res=[]
-    for n in res_id_list:
-        res.append(placed_edge[placed_edge[:,6]==n])
-    return res
 
 def temp_xyz(output,placed_all):
     atoms_number = len(placed_all)
@@ -56,41 +36,7 @@ def temp_xyz(output,placed_all):
             newxyz.append(formatted_line + "\n")
         fp.writelines(newxyz)
 
-def fc_assign_res_idx(placed_all,sc_unit_cell):
-    placed_all_arr=np.empty((len(placed_all),len(placed_all[0])),dtype=object)
-    for i in range(len(placed_all)):
-        line = placed_all[i]
-        placed_all_arr[i]=line
-
-    placed_all_arr[:,1:4]=placed_all_arr[:,1:4].astype(float)
-    placed_all_arr[:,6]=placed_all_arr[:,6].astype(int)
-    res_id=list(np.unique(placed_all_arr[:,6]).astype(int))
-    
-    res_id.sort(reverse=True)
-    res_list=[]
-    for i in range(len(res_id)):
-        r_id = res_id[i]
-        res_arr= placed_all_arr[placed_all_arr[:,6]==r_id]
-        vec = res_arr[:,1:4]
-        cvec = np.dot(np.linalg.inv(sc_unit_cell),vec.T).T
-        #moded_cvec = np.mod(cvec, 1)
-        #cvec=moded_cvec   
-        res_arr[:,1:4] = cvec
-        res_arr[:,6] = i+1
-        res_list.append(res_arr)
-
-    return np.vstack((res_list))
-
-            
-def supercell_array(supercell,array):
-    s_cell_list=[]
-    s_cell_list_append = s_cell_list.append
-    for i in supercell:
-        points = array[:,1:4]
-        new_points= points+i
-        new_array=np.hstack((array[:,0:1],new_points,array[:,4:]))
-        s_cell_list_append(new_array)
-    return np.vstack((s_cell_list))
+ 
 
 def fetch_rescount_targetall(target_all):
     already=[]

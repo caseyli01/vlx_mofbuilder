@@ -1,5 +1,5 @@
 import numpy as np
-from MOF_builder._superimpose import superimpose
+from _superimpose import superimpose
 
 def unit_cell_to_cartesian_matrix(aL,bL,cL,alpha,beta,gamma):
     pi = np.pi

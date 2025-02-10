@@ -1,8 +1,8 @@
 import re
 import numpy as np
 from _process_cifstr import remove_bracket,remove_tail_number,remove_quotes,extract_quote_lines,extract_xyz_coefficients_and_constant,extract_xyz_lines
-from _supercell import make_supercell333,_make_supercell222
-from _filter_distance import filter_neighbor_atoms_by_dist,O_filter_neighbor_atoms_by_dist
+from _supercell import make_supercell333
+from _filter_distance import O_filter_neighbor_atoms_by_dist
 
 def find_keyword(keyword,s):
     m = re.search(keyword,s)
@@ -273,76 +273,6 @@ def extract_node_center(array):
          node_center[i]=np.mean(array[i],axis=0)
     return node_center
 
-
-
-
-def _extract_metal_node_center_cif(
-    cif_file, metal_type, atom_number_in_cluster, cluster_distance_threshhold
-):
-    # array_atom only has the information of atom_type from the cif file and keep the same order with cif
-    cell_info, array_atom, array_metal_xyz = extract_type_atoms_fcoords_in_primitive_cell(
-        cif_file, metal_type
-    )
-    metal_xyz_supercell = _make_supercell222(array_metal_xyz)
-    # find all possible metal atom in a node which fulfill the both creteria of distance and number in the distance
-    node_list = filter_neighbor_atoms_by_dist(
-        atom_number_in_cluster,
-        metal_xyz_supercell,
-        metal_xyz_supercell,
-        cluster_distance_threshhold,
-    )
-   
-    # the metal atom indices should only appear once to form the cluster in 222supercell
-    node_cluster_indices = np.array(
-        np.unique(node_list, axis=0), dtype=int
-    )  # each line is a single metal cluster node in supercell
-    print(node_cluster_indices.shape,'node_cluster_indices')
-    # to get all of possible node centers in a primitive cell by filt array value [0,1]
-    # cause the 222supercell is +1 so all of the values are > 0. then the left side do not need to take care
-    node_center = np.empty(((len(node_cluster_indices), 3)))
-
-    for i in range(node_cluster_indices.shape[0]):
-            node_center[i] = (
-                np.mean(metal_xyz_supercell[node_cluster_indices[i]], axis=0),
-            )
-            node_center[i] = limit_value_0_1(node_center[i])
-
-   
-
-   
-    ##filtered_node_center = node_center[~np.any(node_center > 1.1, axis=1)]
-    ##node_center[node_center >= 1] -= 1  # any value >=1 then -1
-  
-    # find unique node center in primitive cell
-    #filtered_node_center = limit_value_0_1(node_center)
-    node_in_frame, node_in_frame_indices = np.unique(
-        np.round(node_center, 4), axis=0, return_index=True
-    )
-    if node_in_frame.shape[0] == (array_metal_xyz.shape[0] / atom_number_in_cluster):
-        # unique_elements, indices = np.unique(node_in_frame, return_index=True,axis=0)
-        # print(len(node_in_frame),node_in_frame,indices)
-        print(
-            f"from the cif_file {cif_file},"
-            f" the the number of node centers in frame is {node_in_frame.shape[0]}"
-        )
-
-    else:
-        print(
-            f"please check the cif_file {cif_file},"
-            f" the number of node centers in frame is {node_in_frame.shape[0]}"
-            f"\nbut it is supposed to be {int(array_metal_xyz.shape[0]/atom_number_in_cluster)}"
-        )
-    return (
-        cell_info,  # cell information: a,b,c,alpha,beta,gamma
-        array_metal_xyz,  # all of metal atoms in cif input
-        node_in_frame,# node center in a primitive cell in another function 
-        metal_xyz_supercell,  # all the metal atoms positions in a 222supercell
-        node_cluster_indices[node_in_frame_indices],
-        # find the node center in primitive cell but the corresponding position
-        # could be in supercell and is translated to primitive cell.
-        # the indices can be used to extract the node in the supercell
-        # node_center<-->node cluster, they share the same index, the former is the mean of the latter
-    )
 
 
 def search_O_cluster_in_node(

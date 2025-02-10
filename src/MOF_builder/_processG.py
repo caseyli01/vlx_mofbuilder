@@ -1,8 +1,6 @@
 import numpy as np
 import networkx as nx
 
-def check_inside_unit_cell(point):
-    return all([i>=-0.01 and i<=1.01 for i in point])
 
 
 def sort_nodes_by_type_connectivity(G):

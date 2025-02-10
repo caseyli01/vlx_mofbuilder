@@ -1,7 +1,7 @@
 import numpy as np
 import networkx as nx
 import re
-from MOF_builder._superimpose import superimpose
+from _superimpose import superimpose
 from _filtX import filt_outside_edgex
 from _cluster import exposed_Xs_Os_boundary_node
 
@@ -91,10 +91,10 @@ def add_terminations(term_file,ex_node_cxo_cc):
         indices = [index for index, value in enumerate(node_oovecs_record) if is_list_A_in_B(node_xoo_vecs,value[0])]
         if len(indices)==1: 
             #find index of node_oo_vecs in record 
-            #print(f"found one,{indices}")
+            print(f"found one,{indices}")
             rot = node_oovecs_record[indices[0]][1]
         else:
-            #print(term_xoovecs.shape,node_xoo_vecs.shape)
+            print("new_term",term_xoovecs.shape,node_xoo_vecs.shape)
             _,rot,_, = superimpose(term_xoovecs,node_xoo_vecs)
             node_oovecs_record_append((node_xoo_vecs,rot))
         adjusted_term_vecs = np.dot(term_coords,rot) + node_opair_c
