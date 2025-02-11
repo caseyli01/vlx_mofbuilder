@@ -250,8 +250,8 @@ def find_pair_v_e(vvnode333, eenode333):
         if check_inside_unit_cell(v1) or check_inside_unit_cell(v2):
             # check if the center of the pair of v is around e
             if np.linalg.norm(center - e) < 1e-3:
-                G.add_node('V'+str(v1_idx), fcoords=v1)
-                G.add_node('V'+str(v2_idx), fcoords=v2)
+                G.add_node('V'+str(v1_idx), fcoords = v1,note = 'V')
+                G.add_node('V'+str(v2_idx), fcoords = v2,note = 'V')
                 G.add_edge('V'+str(v1_idx), 'V'+str(v2_idx), fcoords=(v1, v2),fc_center=e),
                 pair_ve.append((v1, v2, e))
     return pair_ve, len(pair_ve), G

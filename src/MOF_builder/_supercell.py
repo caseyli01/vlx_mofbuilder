@@ -39,9 +39,9 @@ def make_supercell333(array_xyz):
 def Carte_points_generator(xyz_num):
         x_num, y_num, z_num = xyz_num
         """this function is to generate a group of 3d points(unit=1) defined by user for further grouping points"""
-        unit_dx, unit_dy, unit_dz = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+        unit_dx, unit_dy, unit_dz = np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
         # add x layer
-        points = np.array([0, 0, 0])
+        points = np.array([0.0, 0.0, 0.0])
         for i in range(0, x_num + 1):
             points = np.vstack((points, i * unit_dx))
         # add y layer
