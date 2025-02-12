@@ -110,19 +110,19 @@ def extract_atoms_fcoords_from_lines(atom_site_sector):
         if m is None:
             atom_site_lines.append(line)
 
-    array_atom = np.zeros((len(atom_site_lines), 1), dtype=object)
+    array_atom = np.zeros((len(atom_site_lines), 2), dtype=object) #modified to 2 from 1, NOTE:
     array_xyz = np.zeros((len(atom_site_lines), 3))
 
     for i in range(len(atom_site_lines)):
-        for j in [0, 2, 3, 4]:
-            if j == 0:
+        for j in [0, 1, 2, 3, 4]: #NOTE: modified to 0-4 from 0 2 3 4
+            if j < 2:
                 array_atom[i, j] = remove_tail_number(atom_site_lines[i].split()[j])
             else:
                 array_xyz[i, (j - 2)] = remove_bracket(atom_site_lines[i].split()[j])
-
+    print(f"array_atom{array_atom}")
     return array_atom, array_xyz
 
-def extract_atoms_ccoords_from_lines(cell_info,atom_site_sector,f_com):
+def _extract_atoms_ccoords_from_lines(cell_info,atom_site_sector,f_com):
     atom_site_lines = []
     keyword = "_"
     for line in atom_site_sector:  # search for keywords and get linenumber

@@ -273,7 +273,8 @@ def set_DV_V(G):
                 G.nodes[n]['type'] = 'DV'
         else:
             G.nodes[n]['type'] = 'DV'
-    return G
+    max_degree = max(dict(G.degree()).values())
+    return G,max_degree
 
 #check e_new in G, if e_new = e+[0,0,1] or e = e+[0,0,-1], [0,1,0],[0,-1,0] then this e_new is invalid not unique
 

@@ -1,6 +1,7 @@
 import numpy as np
 import re
 import networkx as nx
+from _place_node_edge import fractional_to_cartesian
 
 def check_inside_unit_cell(point):
     return all([i>=-0.01 and i<=1.01 for i in point])
@@ -153,3 +154,47 @@ def temp_save_eG_TERM_gro(eG,sc_unit_cell,unsaturated_vnode_xoo_dict):
         tail = "10 10 10 \n"
         newgro.append(tail)
         f.writelines(newgro)
+
+
+def make_unsaturated_vnode_xoo_dict(unsaturated_node,xoo_dict,matched_vnode_xind,eG,sc_unit_cell):
+        """
+        make a dictionary of the unsaturated node and the exposed X connected atom index and the corresponding O connected atoms
+        """
+    
+        #process matched_vnode_xind make it to a dictionary
+        matched_vnode_xind_dict = {}
+        for [k,v] in matched_vnode_xind:
+            if k in xoo_dict.keys():
+                matched_vnode_xind_dict[k].extend(v)
+            else:
+                matched_vnode_xind_dict[k] = [v]
+
+        unsaturated_vnode_xind_dict ={}
+        xoo_keys = list(xoo_dict.keys())
+        #for each unsaturated node, get the upmatched x index and xoo atoms
+        for unsat_v in unsaturated_node:
+            if unsat_v in matched_vnode_xind_dict.keys():
+                unsaturated_vnode_xind_dict[unsat_v] = [i for i in xoo_keys if i not in matched_vnode_xind_dict[unsat_v]]
+            else:
+                unsaturated_vnode_xind_dict[unsat_v] = xoo_keys
+        
+        #based on the unsaturated_vnode_xind_dict, add termination to the unsaturated node xoo
+        #loop over unsaturated nodes, and find all exposed X atoms and use paied xoo atoms to form a termination
+        unsaturated_vnode_xoo_dict = {}
+        for vnode,exposed_x_indices in unsaturated_vnode_xind_dict.items():
+            for xind in exposed_x_indices:  
+                x_fpoints = eG.nodes[vnode]['f_points'][xind]
+                x_cpoints = np.hstack((x_fpoints[0:2],fractional_to_cartesian(x_fpoints[2:5],sc_unit_cell))) #NOTE: modified add the atom type and atom name
+                oo_ind_in_vnode = xoo_dict[xind]
+                oo_fpoints_in_vnode = [eG.nodes[vnode]['f_points'][i] for i in oo_ind_in_vnode]
+                oo_fpoints_in_vnode = np.vstack(oo_fpoints_in_vnode)
+                oo_cpoints = np.hstack((oo_fpoints_in_vnode[:,0:2],fractional_to_cartesian(oo_fpoints_in_vnode[:,2:5],sc_unit_cell)))#NOTE: modified add the atom type and atom name
+
+                unsaturated_vnode_xoo_dict[(vnode,xind)] = {'xind':xind,'oo_ind':oo_ind_in_vnode,
+                                                    'x_fpoints':x_fpoints,
+                                                    'x_cpoints':x_cpoints,
+                                                    'oo_fpoints':oo_fpoints_in_vnode,
+                                                    'oo_cpoints':oo_cpoints}
+                
+
+        return unsaturated_vnode_xind_dict,unsaturated_vnode_xoo_dict

@@ -19,7 +19,7 @@ def lname(s):
 
 
 def replace_sG_dvnode_with_vnode(sG,diff_e,dvnode,vnode):
-    sG.add_node(vnode+'_'+str(diff_e),f_points = np.hstack((sG.nodes[vnode]['f_points'][:,0:1],sG.nodes[vnode]['f_points'][:,1:4]+diff_e)),
+    sG.add_node(vnode+'_'+str(diff_e),f_points = np.hstack((sG.nodes[vnode]['f_points'][:,0:2],sG.nodes[vnode]['f_points'][:,2:5]+diff_e)), #NOTE:modified because of extra column of atom type
                             fcoords = sG.nodes[vnode]['fcoords']+diff_e,
                             type='SV',
                             note=sG.nodes[vnode]['note'])
@@ -85,7 +85,7 @@ def update_supercell_node_fpoints_loose(sG,supercell):
                             type='V',
                             note=sG.nodes[n]['note'])
 
-        arr = sG.nodes[n]['f_points'][:,1:4]+supercell
+        arr = sG.nodes[n]['f_points'][:,2:5]+supercell #NOTE:modified because of extra column of atom type
         moded_arr = np.mod(arr,1)
         arr = arr.astype(float)
         moded_arr = moded_arr.astype(float)
@@ -105,7 +105,7 @@ def update_supercell_node_fpoints_loose(sG,supercell):
                 print('node already in superG',n+'_'+str(diff_e))
                 continue
             superG.add_node((n+'_'+str(diff_e)),
-                            f_points = np.hstack((sG.nodes[n]['f_points'][:,0:1],sG.nodes[n]['f_points'][:,1:4]+diff_e)),
+                            f_points = np.hstack((sG.nodes[n]['f_points'][:,0:2],sG.nodes[n]['f_points'][:,2:5]+diff_e)), #NOTE:modified because of extra column of atom type
                             fcoords = sG.nodes[n]['fcoords']+diff_e,
                             type='SV',
                             note=sG.nodes[n]['note'])
@@ -130,27 +130,27 @@ def update_supercell_edge_fpoints(sG,superG,supercell):
             #check if node e[0]+'_'+str(diff_e) and e[1]+'_'+str(diff_e) in superG
             if (s_edge[0] in superG.nodes()) and (s_edge[1] in superG.nodes()):
                 superG.add_edge(s_edge[0],s_edge[1],
-                                f_points=np.hstack((sG.edges[e]['f_points'][:,0:1],sG.edges[e]['f_points'][:,1:4]+i)),
+                                f_points=np.hstack((sG.edges[e]['f_points'][:,0:2],sG.edges[e]['f_points'][:,2:5]+i)),#NOTE:modified because of extra column of atom type
                                 fcoords=sG.edges[e]['fcoords']+i,
                                 type=sG.edges[e]['type'])
                 
             elif (s_edge[0] in superG.nodes()) or (s_edge[1] in superG.nodes()):
                 if s_edge[0] in superG.nodes():
                     superG.add_node(s_edge[1],
-                                    f_points=np.hstack((sG.nodes[e[1]]['f_points'][:,0:1],sG.nodes[e[1]]['f_points'][:,1:4]+i)),
+                                    f_points=np.hstack((sG.nodes[e[1]]['f_points'][:,0:2],sG.nodes[e[1]]['f_points'][:,2:5]+i)),#NOTE:modified because of extra column of atom type
                                     fcoords=sG.nodes[e[1]]['fcoords']+i,
                                     type='DSV',
                                     note=sG.nodes[e[1]]['note'])
                     
                 else:
                     superG.add_node(s_edge[0],
-                                    f_points=np.hstack((sG.nodes[e[0]]['f_points'][:,0:1],sG.nodes[e[0]]['f_points'][:,1:4]+i)),
+                                    f_points=np.hstack((sG.nodes[e[0]]['f_points'][:,0:2],sG.nodes[e[0]]['f_points'][:,2:5]+i)),#NOTE:modified because of extra column of atom type
                                     fcoords=sG.nodes[e[0]]['fcoords']+i,
                                     type='DSV',
                                     note=sG.nodes[e[0]]['note'])
                     
                 superG.add_edge(s_edge[0],s_edge[1],
-                                f_points=np.hstack((sG.edges[e]['f_points'][:,0:1],sG.edges[e]['f_points'][:,1:4]+i)),
+                                f_points=np.hstack((sG.edges[e]['f_points'][:,0:2],sG.edges[e]['f_points'][:,2:5]+i)),#NOTE:modified because of extra column of atom type
                                 fcoords=sG.edges[e]['fcoords']+i,
                                 type='DSE')
                     
@@ -192,7 +192,8 @@ def update_supercell_bundle(superG,super_multiedge_bundlings):
         prim_ecname = pname(ec_node) + '_'+str(np.array([0.,0.,0.]))
         if ec_node not in superG.nodes():
             trans = lname(ec_node)
-            superG.add_node(ec_node,f_points=np.hstack((superG.nodes[prim_ecname]['f_points'][:,0:1],superG.nodes[prim_ecname]['f_points'][:,1:4]+trans)),
+            superG.add_node(ec_node,f_points=np.hstack((superG.nodes[prim_ecname]['f_points'][:,0:2], #NOTE:modified because of extra column of atom type
+                                                        superG.nodes[prim_ecname]['f_points'][:,2:5]+trans)),#NOTE:modified because of extra column of atom type
                             fcoords=superG.nodes[prim_ecname]['fcoords']+trans,
                             type='SV',
                             note=superG.nodes[prim_ecname]['note'])
@@ -201,11 +202,13 @@ def update_supercell_bundle(superG,super_multiedge_bundlings):
             prim_cnname = super_multiedge_bundlings[prim_ecname][j] #find prim_ecname in super_multiedge_bundlings and then get the corresponding prim_cnname
             trans = lname(cn)-lname(prim_cnname)
             if cn not in superG.nodes():
-                superG.add_node(cn,f_points=np.hstack((superG.nodes[prim_cnname]['f_points'][:,0:1],superG.nodes[prim_cnname]['f_points'][:,1:4]+trans)),
+                superG.add_node(cn,f_points=np.hstack((superG.nodes[prim_cnname]['f_points'][:,0:2], #NOTE:modified because of extra column of atom type
+                                                       superG.nodes[prim_cnname]['f_points'][:,2:5]+trans)), #NOTE:modified because of extra column of atom type
                                 fcoords=superG.nodes[prim_cnname]['fcoords']+trans,
                                 type='SV',
                                 note=superG.nodes[prim_cnname]['note'])
-                superG.add_edge(ec_node,cn,f_points=np.hstack((superG.edges[prim_ecname,prim_cnname]['f_points'][:,0:1],superG.edges[prim_ecname,prim_cnname]['f_points'][:,1:4]+trans)),
+                superG.add_edge(ec_node,cn,f_points=np.hstack((superG.edges[prim_ecname,prim_cnname]['f_points'][:,0:2], #NOTE:modified because of extra column of atom type
+                                                               superG.edges[prim_ecname,prim_cnname]['f_points'][:,2:5]+trans)), #NOTE:modified because of extra column of atom type
                                 fcoords=superG.edges[prim_ecname,prim_cnname]['fcoords']+trans,
                                 type='DSE')  
                 

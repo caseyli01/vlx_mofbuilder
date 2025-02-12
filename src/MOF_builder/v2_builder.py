@@ -12,6 +12,7 @@ from make_eG import superG_to_eG_ditopic,superG_to_eG_multitopic,remove_node_by_
 from multiedge_bundling import bundle_multiedge
 from makesuperG import pname,replace_DV_with_corresponding_V,replace_bundle_dvnode_with_vnode,make_super_multiedge_bundlings,check_multiedge_bundlings_insuperG,add_virtual_edge,update_supercell_bundle,update_supercell_edge_fpoints,update_supercell_node_fpoints_loose
 from _terminations import termpdb,Xpdb
+from v2_functions import make_unsaturated_vnode_xoo_dict
 #the following are for test need to be removed
 
 from _learn_template import make_supercell_3x3x3,find_pair_v_e,extract_unit_cell
@@ -21,11 +22,105 @@ from _learn_template import add_ccoords,set_DV_V,set_DE_E
 
 
 class net_optimizer():
+    """
+    net_optimizer is a class to optimize the node and edge structure of the MOF, add terminations to nodes.
+
+    :param vvnode333 (array): 
+        supercell of V nodes in template topology
+    :param ecnode333 (array): 
+        supercell of EC nodes (Center of multitopic linker) in template topology
+    :param eenode333 (array): 
+        supercell of E nodes(ditopic linker or branch of multitopic linker) in template
+    :param unit_cell (array): 
+        unit cell of the template
+    :param cell_info (array): 
+        cell information of the template
+    
+    Instance variables:
+        - node_cif (str):cif file of the node
+        - node_target_type (str):metal atom type of the node
+        - node_unit_cell (array):unit cell of the node
+        - node_atom (array):2 columns, atom_name, atom_type of the node
+        - node_x_fcoords (array):fractional coordinates of the X connected atoms of node
+        - node_fcoords (array):fractional coordinates of the whole node
+        - node_x_ccoords (array):cartesian coordinates of the X connected atoms of node
+        - node_coords (array):cartesian coordinates of the whole node
+        - linker_cif (str):cif file of the ditopic linker or branch of multitopic linker
+        - linker_unit_cell (array):unit cell of the ditopic linker or branch of multitopic linker
+        - linker_atom (array):2 columns, atom_name, atom_type of the ditopic linker or branch of multitopic linker
+        - linker_x_fcoords (array):fractional coordinates of the X connected atoms of ditopic linker or branch of multitopic linker
+        - linker_fcoords (array):fractional coordinates of the whole ditopic linker or branch of multitopic linker
+        - linker_x_ccoords (array):cartesian coordinates of the X connected atoms of ditopic linker or branch of multitopic linker
+        - linker_length (float):distance between two X-X connected atoms of the ditopic linker or branch of multitopic linker
+        - linker_ccoords (array):cartesian coordinates of the whole ditopic linker or branch of multitopic linker
+        - linker_center_cif (str):cif file of the center of the multitopic linker
+        - ec_unit_cell (array):unit cell of the center of the multitopic linker
+        - ec_atom (array):2 columns, atom_name, atom_type of the center of the multitopic linker
+        - ec_x_vecs (array):fractional coordinates of the X connected atoms of the center of the multitopic linker
+        - ec_fcoords (array):fractional coordinates of the whole center of the multitopic linker
+        - ec_xcoords (array):cartesian coordinates of the X connected atoms of the center of the multitopic linker
+        - eccoords (array):cartesian coordinates of the whole center of the multitopic linker
+        - constant_length (float):constant length to add to the linker length, normally 1.54 for single bond of C-C, because C is always used as the connecting atom in the builder
+        - maxfun (int):maximum number of function evaluations for the node rotation optimization
+        - opt_method (str):optimization method for the node rotation optimization
+        - G (networkx graph):graph of the template
+        - node_max_degree (int):maximum degree of the node in the template, should be the same as the node topic
+        - sorted_nodes (list):sorted nodes in the template by connectivity
+        - sorted_edges (list):sorted edges in the template by connectivity
+        - sorted_edges_of_sortednodeidx (list):sorted edges in the template by connectivity with the index of the sorted nodes
+        - optimized_rotations (dict):optimized rotations for the nodes in the template
+        - optimized_params (array):optimized cell parameters for the template topology to fit the target MOF cell
+        - new_edge_length (float):new edge length of the ditopic linker or branch of multitopic linker, 2*constant_length+linker_length
+        - optimized_pair (dict): pair of connected nodes in the template with the index of the X connected atoms, used for the edge placement
+        - scaled_rotated_node_positions (dict):scaled and rotated node positions in the target MOF cell
+        - scaled_rotated_xxxx_positions (dict):scaled and rotated X connected atom positions of nodes in the target MOF cell
+        - sc_unit_cell (array):(scaled) unit cell of the target MOF cell
+        - sc_unit_cell_inv (array):inverse of the (scaled) unit cell of the target MOF cell
+        - sG_node (networkx graph):graph of the target MOF cell
+        - nodes_atom (dict):atom name and atom type of the nodes 
+        - rotated_node_positions (dict):rotated node positions
+        - supercell (array): supercell set by user, along x,y,z direction
+        - multiedge_bundlings (dict):multiedge bundlings of center and branches of the multitopic linker, used for the supercell construction and merging of center and branches to form one EDGE
+        - prim_multiedge_bundlings (dict):multiedge bundlings in primitive cell, used for the supercell construction
+        - super_multiedge_bundlings (dict):multiedge bundlings in the supercell, used for the supercell construction
+        - dv_v_pairs (dict):DV and V pairs in the template, used for the supercell construction
+        - super_multiedge_bundlings (dict):multiedge bundlings in the supercell, used for the supercell construction
+        - superG (networkx graph):graph of the supercell
+        - add_virtual_edge (bool): add virtual edge to the target MOF cell
+        - vir_edge_range (float): range to search the virtual edge between two Vnodes directly, should <= 0.5, used for the virtual edge addition of bridge type nodes: nodes and nodes can connect directly without linker
+        - vir_edge_max_neighbor (int): maximum number of neighbors of the node with virtual edge, used for the virtual edge addition of bridge type nodes
+        - remove_node_list (list):list of nodes to remove in the target MOF cell
+        - remove_edge_list (list):list of edges to remove in the target MOF cell
+        - eG (networkx graph):graph of the target MOF cell with only EDGE and V nodes
+        - node_topic (int):maximum degree of the node in the template, should be the same as the node_max_degree
+        - unsaturated_node (list):unsaturated nodes in the target MOF cell
+        - term_info (array):information of the node terminations
+        - term_coords (array):coordinates of the node terminations
+        - term_xoovecs (array):X and O vectors (usually carboxylate group) of the node terminations
+        - unsaturated_vnode_xind_dict (dict):unsaturated node and the exposed X connected atom index
+        - unsaturated_vnode_xoo_dict (dict):unsaturated node and the exposed X connected atom index and the corresponding O connected atoms   
+    """
+
+
     def __init__(self):
         pass
 
     
     def analyze_template_multitopic(self,vvnode333,ecnode333,eenode333,unit_cell,cell_info):
+        """
+        analyze the template topology of the multitopic linker
+
+        :param vvnode333 (array):
+            supercell of V nodes in template topology
+        :param ecnode333 (array):
+            supercell of EC nodes (Center of multitopic linker) in template topology
+        :param eenode333 (array):
+            supercell of E nodes(ditopic linker or branch of multitopic linker) in template
+        :param unit_cell (array):
+            unit cell of the template
+        :param cell_info (array):
+            cell information of the template
+        """
         self.vvnode333 = vvnode333
         self.ecnode333 = ecnode333
         self.eenode333 = eenode333
@@ -36,16 +131,36 @@ class net_optimizer():
         self.cell_info = cell_info
     
     def analyze_template_ditopic(self,vvnode333,eenode333,unit_cell,cell_info):
+        """
+        analyze the template topology of the ditopic linker
+        
+        :param vvnode333 (array):
+            supercell of V nodes in template topology
+        :param eenode333 (array):
+            supercell of E nodes(ditopic linker or branch of multitopic linker) in template
+        :param unit_cell (array):
+            unit cell of the template
+        :param cell_info (array):
+            cell information of the template
+        """
         self.vvnode333 = vvnode333
         self.eenode333 = eenode333
         _,_,G = find_pair_v_e(vvnode333,eenode333)
         G = add_ccoords(G,unit_cell)
-        G = set_DV_V(G)
+        G,self.node_max_degree = set_DV_V(G)
         self.G = set_DE_E(G)
         self.cell_info = cell_info
 
 
     def node_info(self,node_cif,node_target_type):
+        """
+        get the node information
+
+        :param node_cif (str):
+            cif file of the node
+        :param node_target_type (str):
+            metal atom type of the node
+        """
         self.node_cif = node_cif
         self.node_target_type = node_target_type
         self.node_unit_cell,self.node_atom, self.node_x_fcoords, self.node_fcoords = process_node(node_cif, node_target_type)
@@ -53,6 +168,12 @@ class net_optimizer():
         self.node_coords = np.dot(self.node_unit_cell,self.node_fcoords.T).T
 
     def linker_info(self,linker_cif):
+        """
+        get the linker information
+        
+        :param linker_cif (str):
+            cif file of the ditopic linker or branch of multitopic linker    
+        """
         self.linker_cif = linker_cif
         self.linker_unit_cell,self.linker_atom, self.linker_x_fcoords, self.linker_fcoords = process_node(linker_cif, 'X')
         self.linker_x_ccoords = np.dot(self.linker_unit_cell,self.linker_x_fcoords.T).T
@@ -62,34 +183,73 @@ class net_optimizer():
 
     
     def linker_center(self,linker_center_cif):
+        """
+        get the center of the multitopic linker information
+
+        :param linker_center_cif (str):
+            cif file of the center of the multitopic linker
+        """
         self.linker_center_cif = linker_center_cif
         self.ec_unit_cell,self.ec_atom, self.ec_x_vecs, self.ec_fcoords = process_node(self.linker_center_cif, 'X')
         self.ec_xcoords = np.dot(self.ec_unit_cell,self.ec_x_vecs.T).T
         self.eccoords = np.dot(self.ec_unit_cell,self.ec_fcoords.T).T
 
     def set_constant_length(self,constant_length):
+        """
+        set the constant length to add to the linker length, normally 1.54 (default setting)for single bond of C-C, because C is always used as the connecting atom in the builder
+        """
         self.constant_length = constant_length
     
     def set_maxfun(self,maxfun):
+        """
+        set the maximum number of function evaluations for the node rotation optimization
+        """
         self.maxfun = maxfun
 
     def set_opt_method(self,opt_method):
+        """
+        set the optimization method for the node rotation optimization
+        """
         self.opt_method = opt_method
 
+    def check_node_template_match(self):
+        """
+        precheck, check if the number of nodes in the template matches the maximum degree of the node in the template
+        """
+        return len(self.node_x_ccoords)== self.node_max_degree
+
+
     def optimize(self):
+        """
+        two optimization steps:
+        1. optimize the node rotation
+        2. optimize the cell parameters to fit the target MOF cell    
+        """
+        if not self.check_node_template_match():
+            print('The number of nodes in the template does not match the maximum degree of the node in the template')
+            raise ValueError('The number of nodes in the template does not match the maximum degree of the node in the template')
+
         if hasattr(self,'ec_xcoords'):
             ec_xcoords = self.ec_xcoords
             ecoords = self.eccoords
-        node_xcoords = self.node_x_ccoords
-        node_coords = self.node_coords
-        G = self.G
-        linker_length = self.linker_length
-        opt_method = self.opt_method
+            
+        if not hasattr(self,'opt_method'):
+            self.opt_method = 'L-BFGS-B'
+
         if not hasattr(self,'constant_length'):
             self.constant_length = 1.54
-        constant_length = self.constant_length
-        
 
+        if not hasattr(self,'maxfun'):
+            self.maxfun = 10000
+  
+
+        G = self.G
+        node_xcoords = self.node_x_ccoords
+        node_coords = self.node_coords
+        linker_length = self.linker_length
+        opt_method = self.opt_method
+        maxfun = self.maxfun
+        constant_length = self.constant_length
         sorted_nodes = sort_nodes_by_type_connectivity(G)
 
         #firstly, check if all V nodes have highest connectivity
@@ -129,13 +289,13 @@ class net_optimizer():
         ###3D free rotation
         optimized_rotations,static_xxxx_positions = optimize_rotations(num_nodes,G,sorted_nodes,
                                                                             sorted_edges_of_sortednodeidx, 
-                                                                            xxxx_positions_dict,opt_method,self.maxfun)
+                                                                            xxxx_positions_dict,opt_method,maxfun)
         
         # Apply rotations
         rotated_node_positions = apply_rotations_to_atom_positions(optimized_rotations, G, sorted_nodes,node_positions_dict)
 
         # Save results to XYZ
-        #save_xyz("optimized_nodesstructure.xyz", rotated_node_positions)
+        #save_xyz("optimized_nodesstructure.xyz", rotated_node_positions) #DEBUG
 
         rotated_xxxx_positions_dict,optimized_pair=apply_rotations_to_xxxx_positions(optimized_rotations,
                                                                                      G, 
@@ -201,6 +361,13 @@ class net_optimizer():
         #save_xyz("scale_optimized_nodesstructure.xyz", scaled_rotated_node_positions)
 
     def place_edge_in_net(self):
+        """
+        based on the optimized rotations and cell parameters, use optimized pair to find connected X-X pair in optimized cell, 
+        and place the edge in the target MOF cell
+
+        return:
+            sG (networkx graph):graph of the target MOF cell, with scaled and rotated node and edge positions
+        """
         #linker_middle_point = np.mean(linker_x_vecs,axis=0)
         linker_xx_vec = self.linker_x_ccoords
         linker_length = self.linker_length
@@ -249,7 +416,7 @@ class net_optimizer():
             placed_edge = np.hstack((np.asarray(self.linker_atom), placed_edge_ccoords))
             sG.edges[(i,j)]['coords'] = x_i_x_j_middle_point
             sG.edges[(i,j)]['c_points']=placed_edge
-            sG.edges[(i,j)]['f_points'] = np.hstack((placed_edge[:,0:1],cartesian_to_fractional(placed_edge[:,1:4],sc_unit_cell_inv)))
+            sG.edges[(i,j)]['f_points'] = np.hstack((placed_edge[:,0:2],cartesian_to_fractional(placed_edge[:,2:5],sc_unit_cell_inv))) #NOTE: modified add the atom type and atom name
             _,sG.edges[(i,j)]['x_coords'] = fetch_X_atoms_ind_array(placed_edge,0,'X')
             #edges[(i,j)]=placed_edge
         #placed_node = {}
@@ -264,11 +431,16 @@ class net_optimizer():
         return sG  
 
     def set_supercell(self,supercell):
+        """
+        set the supercell of the target MOF model
+        """
         self.supercell = supercell
 
 
-
     def make_supercell_multitopic(self):
+        """
+        make the supercell of the multitopic linker MOF
+        """
         sG = self.sG
         self.multiedge_bundlings = bundle_multiedge(sG)
         self.dv_v_pairs,sG = replace_DV_with_corresponding_V(sG)
@@ -281,6 +453,10 @@ class net_optimizer():
         return superG
     
     def make_supercell_ditopic(self):
+        """
+        make the supercell of the ditopic linker MOF
+        """
+
         sG = self.sG
         self.dv_v_pairs,sG = replace_DV_with_corresponding_V(sG)
         superG= update_supercell_node_fpoints_loose(sG,self.supercell)
@@ -291,12 +467,21 @@ class net_optimizer():
     
     
     def set_virtual_edge(self,bool_x=False,range=0.5, max_neighbor=2):
+        """
+        set the virtual edge addition for the bridge type nodes, 
+        range is the range to search the virtual edge between two Vnodes directly, should <= 0.5, 
+        max_neighbor is the maximum number of neighbors of the node with virtual edge
+        """
+
         self.add_virtual_edge = bool(bool_x)
         self.vir_edge_range = range
         self.vir_edge_max_neighbor = max_neighbor
 
     
     def add_virtual_edge_for_bridge_node(self):
+        """
+        after setting the virtual edge search, add the virtual edge to the target supercell superG MOF
+        """
         if self.add_virtual_edge:
             superG = add_virtual_edge(self.superG,self.vir_edge_range,self.vir_edge_max_neighbor)
             print('add virtual edge')
@@ -305,12 +490,22 @@ class net_optimizer():
             pass
     
     def set_remove_node_list(self,remove_node_list):
+        """
+        make defect in the target MOF model by removing nodes
+        """
         self.remove_node_list = remove_node_list
     
     def set_remove_edge_list(self,remove_edge_list):
+        """
+        make defect in the target MOF model by removing edges
+        """
         self.remove_edge_list = remove_edge_list
 
-    def make_eG_multitopic(self):
+    def make_eG_from_supereG_multitopic(self):
+        """
+        make the target MOF cell graph with only EDGE and V, link the XOO atoms to the EDGE
+        always need to execute with make_supercell_multitopic
+        """
         if hasattr(self,'remove_node_list'):
             remove_node_list = self.remove_node_list
         else:
@@ -335,6 +530,12 @@ class net_optimizer():
        
 
         eG = remove_node_by_index(eG,remove_node_list,remove_edge_list)
+        self.eG = eG
+        return eG
+        
+
+    def add_xoo_to_edge_multitopic(self): 
+        eG = self.eG
         eG,unsaturated_linker,matched_vnode_xind,xoo_dict = addxoo2edge_multitopic(eG,self.sc_unit_cell)
         self.unsaturated_linker = unsaturated_linker
         self.matched_vnode_xind = matched_vnode_xind
@@ -343,7 +544,11 @@ class net_optimizer():
         return eG
     
 
-    def make_eG_ditopic(self):
+    def make_eG_from_supereG_ditopic(self):
+        """
+        make the target MOF cell graph with only EDGE and V, link the XOO atoms to the EDGE
+        always execute with make_supercell_ditopic
+        """
         if hasattr(self,'remove_node_list'):
             remove_node_list = self.remove_node_list
         else:
@@ -366,8 +571,15 @@ class net_optimizer():
         for n in to_remove_node_name+to_remove_edge_name:
             eG.remove_node(n)
        
-
         eG = remove_node_by_index(eG,remove_node_list,remove_edge_list)
+        self.eG = eG
+        return eG
+
+    def add_xoo_to_edge_ditopic(self):
+        """
+        analyze eG and link the XOO atoms to the EDGE, update eG, for ditopic linker MOF
+        """
+        eG = self.eG
         eG,unsaturated_linker,matched_vnode_xind,xoo_dict = addxoo2edge_ditopic(eG,self.sc_unit_cell)
         self.unsaturated_linker = unsaturated_linker
         self.matched_vnode_xind = matched_vnode_xind
@@ -376,22 +588,37 @@ class net_optimizer():
         return eG
     
     def main_frag_eG(self):
+        """
+        only keep the main fragment of the target MOF cell, remove the other fragments, to avoid the disconnected fragments
+        """
         eG = self.eG
         self.eG = [eG.subgraph(c).copy() for c in nx.connected_components(eG)][0]
         return self.eG
 
 
     def set_node_topic(self,node_topic):
+        """
+        manually set the node topic, normally should be the same as the maximum degree of the node in the template
+        """
         self.node_topic = node_topic
     
     def find_unsaturated_node_eG(self):
+        """
+        use the eG to find the unsaturated nodes, whose degree is less than the node topic
+        """
         eG = self.eG
-        node_topic = self.node_topic
+        if hasattr(self,'node_topic'):
+            node_topic = self.node_topic
+        else:
+            node_topic = self.node_max_degree
         unsaturated_node = find_unsaturated_node(eG,node_topic)
         self.unsaturated_node = unsaturated_node
         return unsaturated_node
     
-    def make_unsaturated_vnode_xoo_dict(self):
+    def _make_unsaturated_vnode_xoo_dict(self):
+        """
+        make a dictionary of the unsaturated node and the exposed X connected atom index and the corresponding O connected atoms
+        """
         unsaturated_node = self.unsaturated_node
         xoo_dict = self.xoo_dict
         matched_vnode_xind = self.matched_vnode_xind
@@ -418,11 +645,11 @@ class net_optimizer():
         for vnode,exposed_x_indices in unsaturated_vnode_xind_dict.items():
             for xind in exposed_x_indices:  
                 x_fpoints = self.eG.nodes[vnode]['f_points'][xind]
-                x_cpoints = np.hstack((x_fpoints[0],fractional_to_cartesian(x_fpoints[1:4],self.sc_unit_cell)))
+                x_cpoints = np.hstack((x_fpoints[0:2],fractional_to_cartesian(x_fpoints[2:5],self.sc_unit_cell))) #NOTE: modified add the atom type and atom name
                 oo_ind_in_vnode =  self.xoo_dict[xind]
                 oo_fpoints_in_vnode = [self.eG.nodes[vnode]['f_points'][i] for i in oo_ind_in_vnode]
                 oo_fpoints_in_vnode = np.vstack(oo_fpoints_in_vnode)
-                oo_cpoints = np.hstack((oo_fpoints_in_vnode[:,0:1],fractional_to_cartesian(oo_fpoints_in_vnode[:,1:4],self.sc_unit_cell)))
+                oo_cpoints = np.hstack((oo_fpoints_in_vnode[:,0:2],fractional_to_cartesian(oo_fpoints_in_vnode[:,2:5],self.sc_unit_cell)))#NOTE: modified add the atom type and atom name
 
                 unsaturated_vnode_xoo_dict[(vnode,xind)] = {'xind':xind,'oo_ind':oo_ind_in_vnode,
                                                     'x_fpoints':x_fpoints,
@@ -434,6 +661,11 @@ class net_optimizer():
         self.unsaturated_vnode_xoo_dict = unsaturated_vnode_xoo_dict
 
     def set_node_terminamtion(self,term_file):
+        """
+        pdb file, set the node termination file, which contains the information of the node terminations, should have X of connected atom (normally C),
+        Y of two connected O atoms (if in carboxylate group) to assist the placement of the node terminations
+        """
+
         term_data = termpdb(term_file)
         term_info = term_data[:, :-3]
         term_coords = term_data[:, -3:]
@@ -456,19 +688,29 @@ class net_optimizer():
 
     # Function to add node terminations
     def add_terminations_to_unsaturated_node(self):
-        net_optimizer.make_unsaturated_vnode_xoo_dict(self)
+        """
+        use the node terminations to add terminations to the unsaturated nodes
+        
+        """
+        unsaturated_node = self.unsaturated_node
+        xoo_dict = self.xoo_dict
+        matched_vnode_xind = self.matched_vnode_xind
+        eG = self.eG
+        sc_unit_cell = self.sc_unit_cell
+        unsaturated_vnode_xind_dict,unsaturated_vnode_xoo_dict = make_unsaturated_vnode_xoo_dict(unsaturated_node,xoo_dict,matched_vnode_xind,eG,sc_unit_cell)
         # term_file: path to the termination file
         # ex_node_cxo_cc: exposed node coordinates
-        unsaturated_vnode_xoo_dict = self.unsaturated_vnode_xoo_dict
+    
         node_oovecs_record = []
-
+        for n in eG.nodes():
+            eG.nodes[n]['term_c_points'] = {}
         for exvnode_xind_key in unsaturated_vnode_xoo_dict.keys():
             exvnode_x_ccoords =unsaturated_vnode_xoo_dict[exvnode_xind_key]['x_cpoints']
             exvnode_oo_ccoords = unsaturated_vnode_xoo_dict[exvnode_xind_key]['oo_cpoints']
             node_xoo_ccoords = np.vstack([exvnode_x_ccoords,exvnode_oo_ccoords])
             #make the beginning point of the termination to the center of the oo atoms
-            node_oo_center_cvec = np.mean(exvnode_oo_ccoords[:,1:4],axis=0)
-            node_xoo_cvecs = node_xoo_ccoords[:,1:4] - node_oo_center_cvec
+            node_oo_center_cvec = np.mean(exvnode_oo_ccoords[:,2:5],axis=0) #NOTE: modified add the atom type and atom name
+            node_xoo_cvecs = node_xoo_ccoords[:,2:5] - node_oo_center_cvec #NOTE: modified add the atom type and atom name
             node_xoo_cvecs = node_xoo_cvecs.astype('float')
         #use record to record the rotation matrix for get rid of the repeat calculation
 
@@ -482,8 +724,11 @@ class net_optimizer():
             adjusted_term = np.hstack((np.asarray(self.term_info[:,0:1]), adjusted_term_vecs))
             #add the adjusted term to the terms, add index, add the node name
             unsaturated_vnode_xoo_dict[exvnode_xind_key]['node_term_c_points'] = adjusted_term
+            eG.nodes[exvnode_xind_key[0]]['term_c_points'][exvnode_xind_key[1]] = adjusted_term
+    
         self.unsaturated_vnode_xoo_dict = unsaturated_vnode_xoo_dict
-        return unsaturated_vnode_xoo_dict
+        self.eG = eG
+        return eG
 
 if __name__ == '__main__':
     start_time = time.time()
@@ -514,8 +759,9 @@ if __name__ == '__main__':
     fcu.set_supercell(supercell)
     fcu.make_supercell_ditopic()
     fcu.set_virtual_edge(False)
-    all_eG = fcu.make_eG()
+    all_eG = fcu.make_eG_from_supereG_ditopic()
     eG = fcu.main_frag_eG()
+    fcu.add_xoo_to_edge_ditopic()
     fcu.set_node_topic(12)
     unsaturated_node = fcu.find_unsaturated_node_eG()
     sc_unit_cell = fcu.sc_unit_cell
