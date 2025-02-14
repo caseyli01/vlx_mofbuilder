@@ -7,18 +7,14 @@ from _node_rotation_matrix_optimizer import optimize_rotations,apply_rotations_t
 from _scale_cif_optimizer import optimize_cell_parameters
 from _place_node_edge import addidx,get_edge_lengths,update_node_ccoords,unit_cell_to_cartesian_matrix,fractional_to_cartesian,cartesian_to_fractional
 from _superimpose import superimpose
-from v2_functions import temp_save_eG_TERM_gro,fetch_X_atoms_ind_array,find_pair_v_e_c,sort_nodes_by_type_connectivity,find_and_sort_edges_bynodeconnectivity,is_list_A_in_B
+from v2_functions import temp_save_eGterm_gro,fetch_X_atoms_ind_array,find_pair_v_e_c,sort_nodes_by_type_connectivity,find_and_sort_edges_bynodeconnectivity,is_list_A_in_B
 from make_eG import superG_to_eG_ditopic,superG_to_eG_multitopic,remove_node_by_index,addxoo2edge_ditopic,addxoo2edge_multitopic,find_unsaturated_node
 from multiedge_bundling import bundle_multiedge
 from makesuperG import pname,replace_DV_with_corresponding_V,replace_bundle_dvnode_with_vnode,make_super_multiedge_bundlings,check_multiedge_bundlings_insuperG,add_virtual_edge,update_supercell_bundle,update_supercell_edge_fpoints,update_supercell_node_fpoints_loose
 from _terminations import termpdb,Xpdb
-from v2_functions import make_unsaturated_vnode_xoo_dict
-#the following are for test need to be removed
-
+from v2_functions import make_unsaturated_vnode_xoo_dict,check_supercell_box_range,save_node_edge_term_gro,extract_node_edge_term,merge_node_edge_term
 from _learn_template import make_supercell_3x3x3,find_pair_v_e,extract_unit_cell
 from _learn_template import add_ccoords,set_DV_V,set_DE_E
-
-
 
 
 class net_optimizer():
@@ -130,26 +126,29 @@ class net_optimizer():
         self.G = set_DE_E(G)
         self.cell_info = cell_info
     
-    def analyze_template_ditopic(self,vvnode333,eenode333,unit_cell,cell_info):
+    def analyze_template_ditopic(self,template_cif):
         """
-        analyze the template topology of the ditopic linker
+        analyze the template topology of the ditopic linker, only V and E nodes in the template
         
-        :param vvnode333 (array):
-            supercell of V nodes in template topology
-        :param eenode333 (array):
-            supercell of E nodes(ditopic linker or branch of multitopic linker) in template
-        :param unit_cell (array):
-            unit cell of the template
-        :param cell_info (array):
-            cell information of the template
+        :param template_cif (str):
+            cif file of the template, including only V and E nodes info in primitive cell
         """
-        self.vvnode333 = vvnode333
-        self.eenode333 = eenode333
+        template_cell_info,_,vvnode = extract_type_atoms_fcoords_in_primitive_cell(template_cif, 'V')
+        _,_,eenode = extract_type_atoms_fcoords_in_primitive_cell(template_cif, 'E')
+        unit_cell = extract_unit_cell(template_cell_info)
+
+        vvnode = np.unique(np.array(vvnode,dtype=float),axis=0)
+        eenode = np.unique(np.array(eenode,dtype=float),axis=0)
+        ##loop over super333xxnode and super333yynode to find the pair of x node in unicell which pass through the yynode
+        vvnode333 = make_supercell_3x3x3(vvnode)
+        eenode333 = make_supercell_3x3x3(eenode)
         _,_,G = find_pair_v_e(vvnode333,eenode333)
         G = add_ccoords(G,unit_cell)
         G,self.node_max_degree = set_DV_V(G)
         self.G = set_DE_E(G)
-        self.cell_info = cell_info
+        self.cell_info = template_cell_info
+        self.vvnode333 = vvnode333
+        self.eenode333 = eenode333
 
 
     def node_info(self,node_cif,node_target_type):
@@ -287,10 +286,14 @@ class net_optimizer():
         num_nodes = G.number_of_nodes()
 
         ###3D free rotation
-        optimized_rotations,static_xxxx_positions = optimize_rotations(num_nodes,G,sorted_nodes,
-                                                                            sorted_edges_of_sortednodeidx, 
-                                                                            xxxx_positions_dict,opt_method,maxfun)
-        
+        if not hasattr(self,'optimized_rotations'):
+            optimized_rotations,static_xxxx_positions = optimize_rotations(num_nodes,G,sorted_nodes,
+                                                                                sorted_edges_of_sortednodeidx, 
+                                                                                xxxx_positions_dict,opt_method,maxfun)
+        else:
+            print('use the optimized_rotations from the previous optimization')
+            optimized_rotations = self.optimized_rotations
+  
         # Apply rotations
         rotated_node_positions = apply_rotations_to_atom_positions(optimized_rotations, G, sorted_nodes,node_positions_dict)
 
@@ -318,8 +321,12 @@ class net_optimizer():
 
 
         #use optimized_params to update all of nodes ccoords in G, according to the fccoords
+        if not hasattr(self,'optimized_params'):
+            optimized_params = optimize_cell_parameters(self.cell_info,original_ccoords,updated_ccoords)
+        else:
+            print('use the optimized_params from the previous optimization')
+            optimized_params = self.optimized_params
 
-        optimized_params = optimize_cell_parameters(self.cell_info,original_ccoords,updated_ccoords)
         sc_unit_cell = unit_cell_to_cartesian_matrix(optimized_params[0],optimized_params[1],optimized_params[2],optimized_params[3],optimized_params[4],optimized_params[5])
         sc_unit_cell_inv = np.linalg.inv(sc_unit_cell)
         sG,scaled_ccoords = update_ccoords_by_optimized_cell_params(self.G,optimized_params)
@@ -574,6 +581,7 @@ class net_optimizer():
         eG = remove_node_by_index(eG,remove_node_list,remove_edge_list)
         self.eG = eG
         return eG
+    
 
     def add_xoo_to_edge_ditopic(self):
         """
@@ -595,6 +603,23 @@ class net_optimizer():
         self.eG = [eG.subgraph(c).copy() for c in nx.connected_components(eG)][0]
         return self.eG
 
+    def make_supercell_range_cleaved_eG(self,buffer=0):
+        eG = self.eG
+        supercell = self.supercell
+        new_eG = eG.copy()
+        for n in eG.nodes():
+            if pname(n) != 'EDGE':
+                if check_supercell_box_range(eG.nodes[n]['fcoords'],supercell,buffer):
+                    pass
+                else:
+                    new_eG.remove_node(n)
+            elif pname(n) == 'EDGE' :
+                if check_supercell_box_range(np.mean(eG.nodes[n]['fcoords'],axis=0),supercell,buffer):
+                    pass
+                else:
+                    new_eG.remove_node(n)
+        self.eG = new_eG
+        return new_eG
 
     def set_node_topic(self,node_topic):
         """
@@ -615,50 +640,6 @@ class net_optimizer():
         self.unsaturated_node = unsaturated_node
         return unsaturated_node
     
-    def _make_unsaturated_vnode_xoo_dict(self):
-        """
-        make a dictionary of the unsaturated node and the exposed X connected atom index and the corresponding O connected atoms
-        """
-        unsaturated_node = self.unsaturated_node
-        xoo_dict = self.xoo_dict
-        matched_vnode_xind = self.matched_vnode_xind
-        #process matched_vnode_xind make it to a dictionary
-        matched_vnode_xind_dict = {}
-        for [k,v] in matched_vnode_xind:
-            if k in xoo_dict.keys():
-                matched_vnode_xind_dict[k].extend(v)
-            else:
-                matched_vnode_xind_dict[k] = [v]
-
-        unsaturated_vnode_xind_dict ={}
-        xoo_keys = list(xoo_dict.keys())
-        #for each unsaturated node, get the upmatched x index and xoo atoms
-        for unsat_v in unsaturated_node:
-            if unsat_v in matched_vnode_xind_dict.keys():
-                unsaturated_vnode_xind_dict[unsat_v] = [i for i in xoo_keys if i not in matched_vnode_xind_dict[unsat_v]]
-            else:
-                unsaturated_vnode_xind_dict[unsat_v] = xoo_keys
-        
-        #based on the unsaturated_vnode_xind_dict, add termination to the unsaturated node xoo
-        #loop over unsaturated nodes, and find all exposed X atoms and use paied xoo atoms to form a termination
-        unsaturated_vnode_xoo_dict = {}
-        for vnode,exposed_x_indices in unsaturated_vnode_xind_dict.items():
-            for xind in exposed_x_indices:  
-                x_fpoints = self.eG.nodes[vnode]['f_points'][xind]
-                x_cpoints = np.hstack((x_fpoints[0:2],fractional_to_cartesian(x_fpoints[2:5],self.sc_unit_cell))) #NOTE: modified add the atom type and atom name
-                oo_ind_in_vnode =  self.xoo_dict[xind]
-                oo_fpoints_in_vnode = [self.eG.nodes[vnode]['f_points'][i] for i in oo_ind_in_vnode]
-                oo_fpoints_in_vnode = np.vstack(oo_fpoints_in_vnode)
-                oo_cpoints = np.hstack((oo_fpoints_in_vnode[:,0:2],fractional_to_cartesian(oo_fpoints_in_vnode[:,2:5],self.sc_unit_cell)))#NOTE: modified add the atom type and atom name
-
-                unsaturated_vnode_xoo_dict[(vnode,xind)] = {'xind':xind,'oo_ind':oo_ind_in_vnode,
-                                                    'x_fpoints':x_fpoints,
-                                                    'x_cpoints':x_cpoints,
-                                                    'oo_fpoints':oo_fpoints_in_vnode,
-                                                    'oo_cpoints':oo_cpoints}
-                
-        self.unsaturated_vnode_xind_dict = unsaturated_vnode_xind_dict
-        self.unsaturated_vnode_xoo_dict = unsaturated_vnode_xoo_dict
 
     def set_node_terminamtion(self,term_file):
         """
@@ -697,7 +678,7 @@ class net_optimizer():
         matched_vnode_xind = self.matched_vnode_xind
         eG = self.eG
         sc_unit_cell = self.sc_unit_cell
-        unsaturated_vnode_xind_dict,unsaturated_vnode_xoo_dict = make_unsaturated_vnode_xoo_dict(unsaturated_node,xoo_dict,matched_vnode_xind,eG,sc_unit_cell)
+        unsaturated_vnode_xind_dict,unsaturated_vnode_xoo_dict,self.matched_vnode_xind_dict = make_unsaturated_vnode_xoo_dict(unsaturated_node,xoo_dict,matched_vnode_xind,eG,sc_unit_cell)
         # term_file: path to the termination file
         # ex_node_cxo_cc: exposed node coordinates
     
@@ -721,7 +702,7 @@ class net_optimizer():
                 _, rot, _ = superimpose(self.term_xoovecs, node_xoo_cvecs)
                 node_oovecs_record.append((node_xoo_cvecs, rot))
             adjusted_term_vecs = np.dot(self.term_coords, rot) + node_oo_center_cvec
-            adjusted_term = np.hstack((np.asarray(self.term_info[:,0:1]), adjusted_term_vecs))
+            adjusted_term = np.hstack((np.asarray(self.term_info[:,0:1]),np.asarray(self.term_info[:,2:3]), adjusted_term_vecs))
             #add the adjusted term to the terms, add index, add the node name
             unsaturated_vnode_xoo_dict[exvnode_xind_key]['node_term_c_points'] = adjusted_term
             eG.nodes[exvnode_xind_key[0]]['term_c_points'][exvnode_xind_key[1]] = adjusted_term
@@ -729,45 +710,77 @@ class net_optimizer():
         self.unsaturated_vnode_xoo_dict = unsaturated_vnode_xoo_dict
         self.eG = eG
         return eG
+    
+    def remove_xoo_from_node(self):
+        """
+        remove the XOO atoms from the node after adding the terminations, add ['noxoo_f_points'] to the node in eG
+        """
+        eG = self.eG
+        xoo_dict = self.xoo_dict
+
+        all_xoo_indices = []
+        for x_ind,oo_ind in xoo_dict.items():
+            all_xoo_indices.append(x_ind)
+            all_xoo_indices.extend(oo_ind)
+
+        for n in eG.nodes():
+            if pname(n) != 'EDGE':
+                all_f_points = eG.nodes[n]['f_points']
+                noxoo_f_points = np.delete(all_f_points,all_xoo_indices,axis=0)
+                eG.nodes[n]['noxoo_f_points'] = noxoo_f_points
+        self.eG = eG
+
+        return eG
+    
+    def write_node_edge_node_gro(self,gro_name):
+        """
+        write the node, edge, node to the gro file
+        """
+        
+        nodes_eG,edges_eG,terms_eG,node_res_num,edge_res_num,term_res_num = extract_node_edge_term(self.eG,self.sc_unit_cell)
+        merged_node_edge_term = merge_node_edge_term(nodes_eG,edges_eG,terms_eG,node_res_num,edge_res_num)
+        save_node_edge_term_gro(merged_node_edge_term,gro_name)
+        print(str(gro_name)+".gro is saved")
+        print("node_res_num: ",node_res_num)
+        print("edge_res_num: ",edge_res_num)
+        print("term_res_num: ",term_res_num)
+
+        self.nodes_eG = nodes_eG
+        self.edges_eG = edges_eG
+        self.terms_eG = terms_eG
+        self.node_res_num = node_res_num
+        self.edge_res_num = edge_res_num
+        self.term_res_num = term_res_num
+        self.merged_node_edge_term = merged_node_edge_term
 
 if __name__ == '__main__':
     start_time = time.time()
-    node_cif = 'node1.cif'
     linker_cif = 'diedge.cif'
-    node_target_type = 'Zr'
-    #template cif 
+    #in database by calling MOF family name and node metal type, dummy node True or False
     template_cif = 'fcu.cif'
-    template_cell_info,_,vvnode = extract_type_atoms_fcoords_in_primitive_cell(template_cif, 'V')
-    _,_,eenode = extract_type_atoms_fcoords_in_primitive_cell(template_cif, 'E')
-    unit_cell = extract_unit_cell(template_cell_info)
+    node_cif = 'node2.cif'
+    node_target_type = 'Zr'
 
-    vvnode = np.unique(np.array(vvnode,dtype=float),axis=0)
-    eenode = np.unique(np.array(eenode,dtype=float),axis=0)
-    ##loop over super333xxnode and super333yynode to find the pair of x node in unicell which pass through the yynode
-    vvnode333 = make_supercell_3x3x3(vvnode)
-    eenode333 = make_supercell_3x3x3(eenode)
     fcu = net_optimizer()
-    fcu.analyze_template_ditopic(vvnode333,eenode333,unit_cell,template_cell_info)
+    fcu.analyze_template_ditopic(template_cif)
     fcu.node_info(node_cif,node_target_type)
     fcu.linker_info(linker_cif)
-    fcu.set_maxfun(10000)
-    fcu.set_opt_method('L-BFGS-B')
     fcu.optimize()
+    fcu.set_supercell([1,1,1])
     print("--- %s seconds ---" % (time.time() - start_time))
     fcu.place_edge_in_net()
-    supercell = [0,0,0]
-    fcu.set_supercell(supercell)
     fcu.make_supercell_ditopic()
-    fcu.set_virtual_edge(False)
-    all_eG = fcu.make_eG_from_supereG_ditopic()
-    eG = fcu.main_frag_eG()
+    fcu.make_eG_from_supereG_ditopic()
+    fcu.main_frag_eG()
+    fcu.make_supercell_range_cleaved_eG()
     fcu.add_xoo_to_edge_ditopic()
-    fcu.set_node_topic(12)
-    unsaturated_node = fcu.find_unsaturated_node_eG()
-    sc_unit_cell = fcu.sc_unit_cell
+    fcu.find_unsaturated_node_eG()
     fcu.set_node_terminamtion('methyl.pdb')
     fcu.add_terminations_to_unsaturated_node()
+    fcu.remove_xoo_from_node()
+    fcu.write_node_edge_node_gro('fcu_ditopic')
     print("--- %s seconds ---" % (time.time() - start_time))
-    unsaturated_node_xoo_dict = fcu.unsaturated_vnode_xoo_dict
-    temp_save_eG_TERM_gro(eG,sc_unit_cell,unsaturated_node_xoo_dict)
-    
+    #temp_save_eGterm_gro(fcu.eG,fcu.sc_unit_cell) #debug
+
+
+  

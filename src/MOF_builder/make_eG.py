@@ -279,6 +279,6 @@ def find_unsaturated_node(eG,node_topics):
             for cn in eG.neighbors(n):
                 if eG.edges[(n,cn)]['type'] == 'real':
                     real_neighbor.append(cn)
-            if len(real_neighbor) < node_topics:
+            if len(real_neighbor)< node_topics:
                 unsaturated_node .append(n)
     return unsaturated_node

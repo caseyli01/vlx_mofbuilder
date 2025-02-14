@@ -44,9 +44,8 @@ def optimize_cell_parameters(cell_info,original_ccoords,updated_ccoords):
     # Initial guess for new unit cell parameters (e.g., slightly modified cell)
     initial_params = cell_info
 
-    # Bounds: a, b, c > 0; angles [0, 180]
-    cell_info
-    bounds = [(cell_info[0], None),(cell_info[1], None),(cell_info[2], None)] + [(20, 180)] * 3
+    # Bounds: a, b, c > 3; angles [0, 180]
+    bounds = [(3, None),(3, None),(3, None)] + [(20, 180)] * 3
 
     # Optimize using L-BFGS-B to minimize the objective function
     result = minimize(

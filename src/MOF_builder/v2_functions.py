@@ -2,6 +2,8 @@ import numpy as np
 import re
 import networkx as nx
 from _place_node_edge import fractional_to_cartesian
+from makesuperG import pname
+
 
 def check_inside_unit_cell(point):
     return all([i>=-0.01 and i<=1.01 for i in point])
@@ -47,6 +49,18 @@ def check_edge_inunitcell(G,e):
         return False
     return True
 
+def check_supercell_box_range(point,supercell,buffer):
+    #to cleave eG to supercell box
+
+    supercell_x = supercell[0]+buffer
+    supercell_y = supercell[1]+buffer  
+    supercell_z = supercell[2]+buffer
+    if point[0] >= 0 and point[0] <= supercell_x and point[1] >= 0 and point[1] <= supercell_y and point[2] >= 0 and point[2] <= supercell_z:
+        return True
+    else:
+        #print(point, 'out of supercell box range:  [',supercell_x,supercell_y,supercell_z, '],   will be excluded') #debug
+        return False
+
 def find_and_sort_edges_bynodeconnectivity(graph, sorted_nodes):
     all_edges = list(graph.edges())
 
@@ -79,7 +93,6 @@ def find_and_sort_edges_bynodeconnectivity(graph, sorted_nodes):
 def is_list_A_in_B(A,B):
         return all([np.allclose(a,b,atol=0.05) for a,b in zip(A,B)])
 
-
 # Function to fetch indices and coordinates of atoms with a specific label
 def fetch_X_atoms_ind_array(array, column, X):
 	# array: input array
@@ -89,72 +102,6 @@ def fetch_X_atoms_ind_array(array, column, X):
 	ind = [k for k in range(len(array)) if re.sub(r'\d', '', array[k, column]) == X]
 	x_array = array[ind]
 	return ind, x_array
-#save eG to gro
-def temp_save_eG_TERM_gro(eG,sc_unit_cell,unsaturated_vnode_xoo_dict):
-    with open('eG_TERM.gro','w') as f:
-        newgro = []
-        newgro.append('eG_TERM\n')
-        newgro.append('17470\n')
-        res_num = 0
-        line_num = 0
-        for n in eG.nodes():
-            #if pname(n) != 'EDGE':
-                #continue
-
-            postions = eG.nodes[n]['f_points']
-            res_num+=1
-            fc = np.asarray(postions[:,1:4],dtype=float)
-            cc = np.dot(sc_unit_cell,fc.T).T
-            positionss = np.hstack((postions[:,0:1],cc))
-            for line in positionss:
-                line_num+=1
-                value_atom_number = int(line_num)  # atom_number
-                value_label = re.sub('\d','',line[0]) # atom_label
-                if 'X' in value_label:
-                    value_label = 'C'
-                elif 'x' in value_label:
-                    value_label = 'C'
-                    
-                value_resname = str(n)[0:1]+str(eG.nodes[n]['index'])  # residue_name
-                value_resnumber = int(res_num) # residue number
-                value_x = 0.1*float(line[1])  # x
-                value_y = 0.1*float(line[2])  # y
-                value_z = 0.1*float(line[3])  # z
-                formatted_line = "%5d%-5s%5s%5d%8.3f%8.3f%8.3f" % (
-                    value_resnumber,
-                    value_resname,
-                    value_label,
-                    value_atom_number,
-                    value_x,
-                    value_y,
-                    value_z,
-                )
-                newgro.append(formatted_line + "\n")
-        for k,v in unsaturated_vnode_xoo_dict.items():
-            res_num+=1
-            for line in v['node_term_c_points']:
-                line_num+=1
-                value_atom_number = int(line_num)
-                value_label = re.sub('\d','',line[0])
-                value_resname = 'T'+str(k[0])[0:2]
-                value_resnumber = int(res_num)
-                value_x = 0.1*float(line[1])
-                value_y = 0.1*float(line[2])
-                value_z = 0.1*float(line[3])
-                formatted_line = "%5d%-5s%5s%5d%8.3f%8.3f%8.3f" % (
-                    value_resnumber,
-                    value_resname,
-                    value_label,
-                    value_atom_number,
-                    value_x,
-                    value_y,
-                    value_z,
-                )
-                newgro.append(formatted_line + "\n")
-        tail = "10 10 10 \n"
-        newgro.append(tail)
-        f.writelines(newgro)
-
 
 def make_unsaturated_vnode_xoo_dict(unsaturated_node,xoo_dict,matched_vnode_xind,eG,sc_unit_cell):
         """
@@ -164,10 +111,11 @@ def make_unsaturated_vnode_xoo_dict(unsaturated_node,xoo_dict,matched_vnode_xind
         #process matched_vnode_xind make it to a dictionary
         matched_vnode_xind_dict = {}
         for [k,v] in matched_vnode_xind:
-            if k in xoo_dict.keys():
-                matched_vnode_xind_dict[k].extend(v)
+            if k in matched_vnode_xind_dict.keys():
+                matched_vnode_xind_dict[k].append(v)
             else:
                 matched_vnode_xind_dict[k] = [v]
+       
 
         unsaturated_vnode_xind_dict ={}
         xoo_keys = list(xoo_dict.keys())
@@ -175,6 +123,7 @@ def make_unsaturated_vnode_xoo_dict(unsaturated_node,xoo_dict,matched_vnode_xind
         for unsat_v in unsaturated_node:
             if unsat_v in matched_vnode_xind_dict.keys():
                 unsaturated_vnode_xind_dict[unsat_v] = [i for i in xoo_keys if i not in matched_vnode_xind_dict[unsat_v]]
+                #print(unsaturated_vnode_xind_dict[unsat_v],'unsaturated_vnode_xind_dict[unsat_v]') #DEBUG
             else:
                 unsaturated_vnode_xind_dict[unsat_v] = xoo_keys
         
@@ -197,4 +146,172 @@ def make_unsaturated_vnode_xoo_dict(unsaturated_node,xoo_dict,matched_vnode_xind
                                                     'oo_cpoints':oo_cpoints}
                 
 
-        return unsaturated_vnode_xind_dict,unsaturated_vnode_xoo_dict
+        return unsaturated_vnode_xind_dict,unsaturated_vnode_xoo_dict,matched_vnode_xind_dict
+
+#functions for write 
+# write gro file
+def extract_node_edge_term(tG,sc_unit_cell):
+    nodes_tG = []
+    terms_tG = []
+    edges_tG = []
+    node_res_num = 0
+    term_res_num = 0
+    edge_res_num = 0
+    nodes_check_set = set()
+    edges_check_set = set()
+    terms_check_set = set()
+    for n in tG.nodes():
+        if pname(n) != 'EDGE':
+            postions = tG.nodes[n]['noxoo_f_points']
+            nodes_check_set.add(len(postions))
+            if len(nodes_check_set) >1:
+                raise ValueError('node index is not continuous')
+            node_res_num+=1
+            nodes_tG.append(np.hstack((np.tile(np.array([node_res_num,'NODE']), (len(postions), 1)), #residue number and residue name
+                                       postions[:, 1:2], #atom type (element)
+                                       fractional_to_cartesian(postions[:, 2:5], sc_unit_cell), #Cartesian coordinates
+                                       postions[:, 0:1], #atom name
+                                       np.tile(np.array([n]), (len(postions), 1))))) #node name in eG is added to the last column
+            for term_ind_key,c_positions in tG.nodes[n]['term_c_points'].items():
+                terms_check_set.add(len(c_positions))
+                if len(terms_check_set) >1:
+                    raise ValueError('term index is not continuous')
+
+                term_res_num+=1
+                terms_tG.append(np.hstack((np.tile(np.array([term_res_num,'TERM']), (len(c_positions), 1)),  #residue number and residue name
+                                           c_positions[:, 1:2], #atom type (element)
+                                           c_positions[:, 2:5], #Cartesian coordinates
+                                           c_positions[:, 0:1], #atom name
+                                           np.tile(np.array([term_ind_key]), (len(c_positions), 1))))) #term name in eG is added to the last column
+
+            
+        elif pname(n) == 'EDGE':
+            postions = tG.nodes[n]['f_points']
+            edges_check_set.add(len(postions))
+            if len(edges_check_set) >1:
+                raise ValueError('edge index is not continuous')
+            edge_res_num+=1
+            edges_tG.append(np.hstack((np.tile(np.array([edge_res_num,'EDGE']), (len(postions), 1)), #residue number and residue name
+                                        postions[:, 1:2], #atom type (element)
+                                        fractional_to_cartesian(postions[:, 2:5], sc_unit_cell), #Cartesian coordinates
+                                        postions[:, 0:1], #atom name
+                                        np.tile(np.array([n]), (len(postions), 1))))) #edge name in eG is added to the last column
+
+    nodes_tG = np.vstack(nodes_tG)
+    terms_tG = np.vstack(terms_tG)
+    edges_tG = np.vstack(edges_tG)
+    return nodes_tG,edges_tG,terms_tG,node_res_num,edge_res_num,term_res_num
+
+
+
+
+
+
+
+
+def convert_node_array_to_gro_lines(line,line_num,res_num_start,name):
+    line_num+=1
+    value_atom_number = int(line_num)  # atom_number
+    value_label = re.sub('\d','',line[2]) # atom_label       
+    value_resname = str(name)[0:3]#+str(eG.nodes[n]['index'])  # residue_name
+    value_resnumber = int(res_num_start+int(line[0])) # residue number
+    value_x = 0.1*float(line[3])  # x
+    value_y = 0.1*float(line[4])  # y
+    value_z = 0.1*float(line[5])  # z
+    formatted_line = "%5d%-5s%5s%5d%8.3f%8.3f%8.3f" % (
+        value_resnumber,
+        value_resname,
+        value_label,
+        value_atom_number,
+        value_x,
+        value_y,
+        value_z,
+    )
+    return formatted_line,line_num
+
+def merge_node_edge_term(nodes_tG,edges_tG,terms_tG,node_res_num,edge_res_num):
+    merged_node_edge_term = []
+    line_num = 0
+    for line in nodes_tG:
+        formatted_line,line_num = convert_node_array_to_gro_lines(line,line_num,0,'NOD')
+        merged_node_edge_term.append(formatted_line + "\n")
+    for line in edges_tG:
+        formatted_line,line_num = convert_node_array_to_gro_lines(line,line_num,node_res_num,'EDG')
+        merged_node_edge_term.append(formatted_line + "\n")
+    for line in terms_tG:
+        formatted_line,line_num = convert_node_array_to_gro_lines(line,line_num,node_res_num+edge_res_num,'TER')
+        merged_node_edge_term.append(formatted_line + "\n")
+    return merged_node_edge_term
+
+def save_node_edge_term_gro(merged_node_edge_term,gro_name):
+    with open(str(gro_name)+'.gro','w') as f:
+        head =[]
+        head.append("eG_NET\n")
+        head.append(str(len(merged_node_edge_term))+"\n")
+        f.writelines(head)
+        f.writelines(merged_node_edge_term)
+        tail = ["10 10 10 \n"]
+        f.writelines(tail)
+
+
+
+
+#debug write gro function
+def convert_positions_to_gro_lines(line,line_num,res_num,name):
+    line_num+=1
+    value_atom_number = int(line_num)  # atom_number
+    value_label = re.sub('\d','',line[0]) # atom_label
+    value_resname = str(name)[0:3]#+str(eG.nodes[n]['index'])  # residue_name
+    value_resnumber = int(res_num) # residue number
+    value_x = 0.1*float(line[1])  # x
+    value_y = 0.1*float(line[2])  # y
+    value_z = 0.1*float(line[3])  # z
+    formatted_line = "%5d%-5s%5s%5d%8.3f%8.3f%8.3f" % (
+        value_resnumber,
+        value_resname,
+        value_label,
+        value_atom_number,
+        value_x,
+        value_y,
+        value_z,
+    )
+
+    return formatted_line,line_num, res_num
+
+def temp_save_eGterm_gro(eG,sc_unit_cell):
+    with open('eG_TERM.gro','w') as f:
+        newgro = []
+        res_num = 0
+        line_num = 0
+        for n in eG.nodes():
+            if pname(n) != 'EDGE':
+                postions = eG.nodes[n]['f_points']
+                res_num+=1
+                fc = np.asarray(postions[:,2:5],dtype=float)
+                cc = np.dot(sc_unit_cell,fc.T).T
+                positionss = np.hstack((postions[:,1:2],cc))
+                for line in positionss:
+                    formatted_line,line_num, res_num = convert_positions_to_gro_lines(line,line_num,res_num,n)
+                    newgro.append(formatted_line + "\n")
+                for term_ind_key,c_positions in eG.nodes[n]['term_c_points'].items():
+                    for line in c_positions:
+                        formatted_line,line_num, res_num = convert_positions_to_gro_lines(line,line_num,res_num,term_ind_key)
+                        newgro.append(formatted_line + "\n")
+                
+            elif pname(n) == 'EDGE':
+                postions = eG.nodes[n]['f_points']
+                res_num+=1
+                fc = np.asarray(postions[:,2:5],dtype=float)
+                cc = np.dot(sc_unit_cell,fc.T).T
+                positionss = np.hstack((postions[:,1:2],cc))
+                for line in positionss:
+                    formatted_line,line_num, res_num = convert_positions_to_gro_lines(line,line_num,res_num,n)
+                    newgro.append(formatted_line + "\n")
+        head =[]
+        head.append("eG_TERM\n")
+        head.append(str(line_num)+"\n")
+        tail = ["10 10 10 \n"]
+        f.writelines(head)
+        f.writelines(newgro)
+        f.writelines(tail)
+ 

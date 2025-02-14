@@ -361,7 +361,7 @@ class net_optimizer():
             #print(rotated_xx,'rotated_xx',xx_vector) #DEBUG
             placed_edge_ccoords = np.dot(self.linker_ccoords, rot) + x_i_x_j_middle_point
 
-            placed_edge = np.hstack((np.asarray(self.linker_atom), placed_edge_ccoords))
+            placed_edge = np.hstack((np.asarray(self.linker_atom[:,0:1]), placed_edge_ccoords))
             sG.edges[(i,j)]['coords'] = x_i_x_j_middle_point
             sG.edges[(i,j)]['c_points']=placed_edge
             sG.edges[(i,j)]['f_points'] = np.hstack((placed_edge[:,0:1],cartesian_to_fractional(placed_edge[:,1:4],sc_unit_cell_inv)))
@@ -372,7 +372,7 @@ class net_optimizer():
             #print(k,v)
             #placed_node[k] = np.hstack((nodes_atom[k],v))
             sG.nodes[k]['c_points'] = np.hstack((nodes_atom[k],v))
-            sG.nodes[k]['f_points'] = np.hstack((nodes_atom[k],cartesian_to_fractional(v,sc_unit_cell_inv)))
+            sG.nodes[k]['f_points'] = np.hstack((nodes_atom[k][:,0:1],cartesian_to_fractional(v,sc_unit_cell_inv)))
             #find the atoms starts with "x" and extract the coordinates
             _,sG.nodes[k]['x_coords'] = fetch_X_atoms_ind_array(sG.nodes[k]['c_points'],0,'X')
         self.sG = sG
@@ -380,7 +380,7 @@ class net_optimizer():
 
 #test if __main__
 if __name__ == '__main__':
-    node_cif = 'node1.cif'
+    node_cif = 'node2.cif'
     linker_cif = 'diedge.cif'
     node_target_type = 'Zr'
     #template cif 
@@ -400,7 +400,7 @@ if __name__ == '__main__':
 
 
 
-    G = set_DV_V(G)
+    G,_ = set_DV_V(G)
     G = set_DE_E(G)
 
     fcu = net_optimizer(G)
@@ -408,7 +408,7 @@ if __name__ == '__main__':
     fcu.set_constant_length(1.0)
     fcu.node_info(node_cif,node_target_type)
     fcu.linker_info(linker_cif)
-    fcu.set_maxfun(20000)
+    fcu.set_maxfun(10000)
     fcu.set_opt_method('l-bfgs-b')
     fcu.optimize()
     fcu.place_edge_in_net()

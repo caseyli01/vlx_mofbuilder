@@ -114,9 +114,9 @@ def place_edgeinnodeframe(sorted_nodes,optimized_pair,node_atom,linker_atom,link
             
         #use the rotation matrix to rotate the linker x coords
         placed_edge_ccoords = np.dot(translated_linker_coords, rot) + x_i_x_j_middle_point
-        placed_edge = np.hstack((np.asarray(linker_atom), placed_edge_ccoords))
+        placed_edge = np.hstack((np.asarray(linker_atom[:,0:1]), placed_edge_ccoords))
         edges[(i,j)]=placed_edge
     placed_node = {}
     for k,v in scaled_rotated_chain_node_positions.items():
-        placed_node[k] = np.hstack((node_atom,v))
+        placed_node[k] = np.hstack((node_atom[:,0:1],v))
     return placed_node,edges

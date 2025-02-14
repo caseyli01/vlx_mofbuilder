@@ -100,7 +100,8 @@ def read_cif(cif_file):
 
     return cell_info, symmetry_sector, atom_site_sector
 
-#pbc process cif xyz
+#pbc process cif xyz#TODO: -0.5 to 0.5 pbc condition
+
 
 def extract_atoms_fcoords_from_lines(atom_site_sector):
     atom_site_lines = []
@@ -119,7 +120,7 @@ def extract_atoms_fcoords_from_lines(atom_site_sector):
                 array_atom[i, j] = remove_tail_number(atom_site_lines[i].split()[j])
             else:
                 array_xyz[i, (j - 2)] = remove_bracket(atom_site_lines[i].split()[j])
-    print(f"array_atom{array_atom}")
+    #print(f"array_atom{array_atom}") #DEBUG
     return array_atom, array_xyz
 
 def _extract_atoms_ccoords_from_lines(cell_info,atom_site_sector,f_com):
@@ -346,7 +347,7 @@ def process_node(chain_node_cif, target_type):
     #metal_fvec = node_target_atoms[0]-node_target_atoms[1]
     #node_pillar_fvec = metal_fvec/np.linalg.norm(metal_fvec) 
     node_x_fcoords = node_x_fcoords - f_com
-    print(f"node_x_fcoords{node_x_fcoords}")
-    print(f"node_ccoords_com{np.mean(node_ccoords,axis=0)}")
+    #print(f"node_x_fcoords{node_x_fcoords}") #DEBUG
+    #print(f"node_ccoords_com{np.mean(node_ccoords,axis=0)}")   #DEBUG
 
     return node_unit_cell,node_atom, node_x_fcoords, node_fcoords
