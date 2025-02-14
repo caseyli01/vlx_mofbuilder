@@ -18,12 +18,15 @@ def unit_cell_to_cartesian_matrix(aL,bL,cL,alpha,beta,gamma):
     return unit_cell
 
 def fractional_to_cartesian(fractional_coords, T):
+    T =T.astype(float)
+    fractional_coords = fractional_coords.astype(float)
     """Convert fractional coordinates to Cartesian using the transformation matrix."""
     return np.dot(T,fractional_coords.T).T
 
 def cartesian_to_fractional(cartesian_coords, unit_cell_inv):
+    cartesian_coords = cartesian_coords.astype(float)
+    unit_cell_inv = unit_cell_inv.astype(float)
     """Convert Cartesian coordinates to fractional coordinates using the inverse transformation matrix."""
- 
     return np.dot(unit_cell_inv,cartesian_coords.T).T
 
 
@@ -44,7 +47,7 @@ def get_edge_lengths(G):
         edge_lengths[(i,j)] = length
         edge_lengths[(j,i)] = length
         lengths.append(length)
-    print('edge lengths:',edge_lengths,set(lengths))
+    #print('edge lengths:',set(lengths)) #debug
     if len(set(lengths)) != 1:
         print('more than one type of edge length')
         #if the length are close, which can be shown by std 

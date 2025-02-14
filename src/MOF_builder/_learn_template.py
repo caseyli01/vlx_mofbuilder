@@ -4,7 +4,7 @@ from itertools import combinations
 from scipy.spatial.distance import pdist,squareform
 from scipy.cluster.hierarchy import linkage, fcluster
 from scipy.spatial import KDTree
-from _readcif import extract_type_atoms_fcoords_in_primitive_cell
+from _readcif_pdb import extract_type_atoms_fcoords_in_primitive_cell
 # use cell_info to generate the matrix for the unit cell to get cartesian coordinates
 def make_supercell_3x3x3(array_xyz):
     array_x1 = array_xyz + np.array([1, 0, 0])

@@ -3,6 +3,50 @@ import numpy as np
 from _process_cifstr import remove_bracket,remove_tail_number,remove_quotes,extract_quote_lines,extract_xyz_coefficients_and_constant,extract_xyz_lines
 from _supercell import make_supercell333
 from _filter_distance import O_filter_neighbor_atoms_by_dist
+import os
+
+def read_pdb(pdbfile):
+    if not os.path.exists(pdbfile):
+        raise FileNotFoundError(f"pdb file {pdbfile} not found")
+    print(f"trying to read pdb file {pdbfile}")
+    
+    inputfile = str(pdbfile)
+    with open(inputfile, "r") as fp:
+        lines = fp.readlines()
+    data = []
+    for line in lines:
+        line = line.strip()
+        if len(line)>0: #skip blank line
+            if line[0:4] == "ATOM" or line[0:6] == "HETATM":
+                value_atom = line[12:16].strip()  # atom_label
+                value_x = float(line[30:38])  # x
+                value_y = float(line[38:46])  # y
+                value_z = float(line[46:54])  # z
+                atom_type = line[67:80].strip() # atom_note
+                data.append([value_atom,atom_type,value_x,value_y,value_z])
+    return np.vstack(data)
+
+def nn(s):
+    return re.sub(r'\d+', '', s)
+
+
+
+def process_node_pdb(pdbfile,com_target_type):
+    data = read_pdb(pdbfile)
+    node_atoms = data[:,0:2]
+    node_ccoords = data[:,2:5]
+    node_ccoords = node_ccoords.astype(float)
+    com_type_indices = [i for i in range(len(node_atoms)) if nn(node_atoms[i,0])==com_target_type]
+    x_indices = [j for j in range(len(node_atoms)) if nn(node_atoms[j,0])=='X']
+    node_x_ccoords = data[x_indices,2:5]
+    node_x_ccoords = node_x_ccoords.astype(float)
+    com_type_ccoords = node_ccoords[com_type_indices]
+    com_type = np.mean(com_type_ccoords,axis=0)
+    node_ccoords = node_ccoords - com_type
+    node_x_ccoords = node_x_ccoords - com_type
+    return node_atoms,node_ccoords,node_x_ccoords
+
+
 
 def find_keyword(keyword,s):
     m = re.search(keyword,s)

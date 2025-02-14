@@ -320,7 +320,7 @@ def create_pdb(filename,lines):
         fp.writelines(newpdb)
 
 
-def process_linker_molecule(molecule,linker_topic):
+def process_linker_molecule(molecule,linker_topic,save_nodes_dir='nodes',save_edges_dir='edges'):
     coords=molecule.get_coordinates_in_angstrom()
     labels = molecule.get_labels()
     # To remove center metals
@@ -439,21 +439,33 @@ def process_linker_molecule(molecule,linker_topic):
         rows,frag_Xs = lines_of_single_frag(subgraph_single_frag,Xs_indices)
         single_frag_bonds = get_bonds_from_subgraph(subgraph_single_frag,Xs_indices)
         if linker_topic == 3:
-            print('center_frag:',subgraph_center_frag.number_of_nodes(),center_Xs)
-            print('outer_frag:' ,subgraph_single_frag.number_of_nodes(),frag_Xs)
-            create_cif(lines,center_frag_bonds,'nodes','tricenter.cif')
-            create_cif(rows,single_frag_bonds,'edges','triedge.cif')
-            return (subgraph_center_frag.number_of_nodes(),center_Xs,subgraph_single_frag.number_of_nodes(),frag_Xs)
+            print('linker_center_frag:',subgraph_center_frag.number_of_nodes(),center_Xs)
+            print('linker_outer_frag:' ,subgraph_single_frag.number_of_nodes(),frag_Xs)
+            linker_center_node_pdb_name = os.path.join(save_nodes_dir,'tricenter')
+            create_pdb(linker_center_node_pdb_name,lines)
+            linker_branch_pdb_name = os.path.join(save_edges_dir,'triedge')
+            create_pdb(linker_branch_pdb_name,rows)
+            #create_cif(lines,center_frag_bonds,save_nodes_dir,'tricenter.cif')
+            #create_cif(rows,single_frag_bonds,save_edges_dir,'triedge.cif')
+            return (subgraph_center_frag.number_of_nodes(),center_Xs,subgraph_single_frag.number_of_nodes(),frag_Xs,linker_center_node_pdb_name+'.pdb',linker_branch_pdb_name+'.pdb')
         elif linker_topic == 4:
             print('center_frag:',subgraph_center_frag.number_of_nodes(),center_Xs)
             print('outer_frag:' ,subgraph_single_frag.number_of_nodes(),frag_Xs)
-            create_cif(lines,center_frag_bonds,'nodes','tetracenter.cif')
-            create_cif(rows,single_frag_bonds,'edges','tetraedge.cif')
-            return (subgraph_center_frag.number_of_nodes(),center_Xs,subgraph_single_frag.number_of_nodes(),frag_Xs)
+            linker_center_node_pdb_name = os.path.join(save_nodes_dir,'tetracenter')
+            create_pdb(linker_center_node_pdb_name,lines)
+            linker_branch_pdb_name = os.path.join(save_edges_dir,'tetraedge')
+            create_pdb(linker_branch_pdb_name,rows)
+            #create_cif(lines,center_frag_bonds,save_nodes_dir,'tetracenter.cif')
+            #create_cif(rows,single_frag_bonds,save_edges_dir,'tetraedge.cif')
+            return (subgraph_center_frag.number_of_nodes(),center_Xs,subgraph_single_frag.number_of_nodes(),frag_Xs,linker_center_node_pdb_name+'.pdb',linker_branch_pdb_name+'.pdb')
         else:
-            create_cif(lines,center_frag_bonds,'nodes','multicenter.cif')
-            create_cif(rows,single_frag_bonds,'edges','multiedge.cif')
-            return (subgraph_center_frag.number_of_nodes(),center_Xs,subgraph_single_frag.number_of_nodes(),frag_Xs)
+            linker_center_node_pdb_name = os.path.join(save_nodes_dir,'multicenter')
+            create_pdb(linker_center_node_pdb_name,lines)
+            linker_branch_pdb_name = os.path.join(save_edges_dir,'multiedge')
+            create_pdb(linker_branch_pdb_name,rows)
+            #create_cif(lines,center_frag_bonds,'nodes','multicenter.cif')
+            #create_cif(rows,single_frag_bonds,'edges','multiedge.cif')
+            return (subgraph_center_frag.number_of_nodes(),center_Xs,subgraph_single_frag.number_of_nodes(),frag_Xs,linker_center_node_pdb_name+'.pdb',linker_branch_pdb_name+'.pdb')
         
     elif linker_topic == 2: #ditopic
         pairXs = Xs_indices
@@ -464,8 +476,9 @@ def process_linker_molecule(molecule,linker_topic):
         lines,center_Xs = lines_of_center_frag(subgraph_center_frag,Xs_indices,metals,labels,coords,mass_center_angstrom)
         center_frag_bonds = get_bonds_from_subgraph(subgraph_center_frag,Xs_indices)
         #create_cif(lines,center_frag_bonds,'edges','diedge.cif')
-        create_pdb('edges/diedge',lines)
-        print('center_frag:',subgraph_center_frag.number_of_nodes(),center_Xs)
-        return (subgraph_center_frag.number_of_nodes(),center_Xs,0,[])
+        edge_pdb_name = os.path.join(save_edges_dir,'diedge')
+        create_pdb(edge_pdb_name,lines)
+        print('linker_center_frag:',subgraph_center_frag.number_of_nodes(),center_Xs)
+        return (subgraph_center_frag.number_of_nodes(),center_Xs,0,[],None,edge_pdb_name+'.pdb')
 
         

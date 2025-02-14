@@ -43,9 +43,11 @@ def terminate_nodes(term_file,boundary_connected_nodes_res,connected_nodeedge_fc
         return terms_cc_loose
     else:
         return np.empty((0,9),dtype='O')
+def nn(s):
+    return re.sub('[0-9]','',s)
 
 def Xpdb(data,X): 
-        indices=[i for i in range(len(data)) if data[i,2][0] == X]
+        indices=[i for i in range(len(data)) if nn(data[i,0]) == X]
         X_term=data[indices]
         return X_term,indices
 

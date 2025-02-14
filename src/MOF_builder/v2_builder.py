@@ -2,7 +2,7 @@ import re
 import time
 import numpy as np
 import networkx as nx
-from _readcif import process_node,read_cif,extract_type_atoms_fcoords_in_primitive_cell
+from _readcif_pdb import process_node,read_cif,read_pdb,process_node_pdb,extract_type_atoms_fcoords_in_primitive_cell
 from _node_rotation_matrix_optimizer import optimize_rotations,apply_rotations_to_atom_positions,apply_rotations_to_xxxx_positions,update_ccoords_by_optimized_cell_params
 from _scale_cif_optimizer import optimize_cell_parameters
 from _place_node_edge import addidx,get_edge_lengths,update_node_ccoords,unit_cell_to_cartesian_matrix,fractional_to_cartesian,cartesian_to_fractional
@@ -151,7 +151,7 @@ class net_optimizer():
         self.eenode333 = eenode333
 
 
-    def node_info(self,node_cif,node_target_type):
+    def _node_info(self,node_cif,node_target_type):
         """
         get the node information
 
@@ -166,7 +166,7 @@ class net_optimizer():
         self.node_x_ccoords = np.dot(self.node_unit_cell,self.node_x_fcoords.T).T
         self.node_coords = np.dot(self.node_unit_cell,self.node_fcoords.T).T
 
-    def linker_info(self,linker_cif):
+    def _linker_info(self,linker_cif):
         """
         get the linker information
         
@@ -181,7 +181,7 @@ class net_optimizer():
         self.linker_ccoords = linker_ccoords - np.mean(linker_ccoords,axis=0)
 
     
-    def linker_center(self,linker_center_cif):
+    def _linker_center(self,linker_center_cif):
         """
         get the center of the multitopic linker information
 
@@ -192,6 +192,46 @@ class net_optimizer():
         self.ec_unit_cell,self.ec_atom, self.ec_x_vecs, self.ec_fcoords = process_node(self.linker_center_cif, 'X')
         self.ec_xcoords = np.dot(self.ec_unit_cell,self.ec_x_vecs.T).T
         self.eccoords = np.dot(self.ec_unit_cell,self.ec_fcoords.T).T
+
+
+    
+
+    def node_info(self,node_pdb):
+        """
+        get the node information
+
+        :param node_cif (str):
+            cif file of the node
+        :param node_target_type (str):
+            metal atom type of the node
+        """
+        self.node_pdb = node_pdb
+        self.node_atom, self.node_ccoords, self.node_x_ccoords = process_node_pdb(node_pdb,'X') #com type could be metal in bridge nodes
+
+    def linker_info(self,linker_pdb):
+        """
+        get the linker information
+        
+        :param linker_cif (str):
+            cif file of the ditopic linker or branch of multitopic linker    
+        """
+        self.linker_pdb = linker_pdb
+        self.linker_atom, self.linker_ccoords, self.linker_x_ccoords = process_node_pdb(linker_pdb,'X')
+        self.linker_length = np.linalg.norm(self.linker_x_ccoords[0]-self.linker_x_ccoords[1])
+
+
+    
+    def _linker_center(self,linker_center_pdb):
+        """
+        get the center of the multitopic linker information
+
+        :param linker_center_cif (str):
+            cif file of the center of the multitopic linker
+        """
+
+        self.linker_center_pdb = linker_center_pdb
+        self.ec_atom, self.ec_ccoords, self.ec_x_ccoords = process_node_pdb(linker_center_pdb,'X') #com type could be another
+
 
     def set_constant_length(self,constant_length):
         """
@@ -217,6 +257,19 @@ class net_optimizer():
         """
         return len(self.node_x_ccoords)== self.node_max_degree
 
+    def load_saved_optimized_rotations(self,optimized_rotations):
+        """
+        use the saved optimized rotations from the previous optimization
+        """
+        self.saved_optimized_rotations = optimized_rotations
+        print('load the saved optimized_rotations from the previous optimization')
+    
+    def to_save_optimized_rotations(self,filename):
+        """
+        save the optimized rotations to the file
+        """
+        self.to_save_optimized_rotations_filename = filename
+        
 
     def optimize(self):
         """
@@ -229,8 +282,8 @@ class net_optimizer():
             raise ValueError('The number of nodes in the template does not match the maximum degree of the node in the template')
 
         if hasattr(self,'ec_xcoords'):
-            ec_xcoords = self.ec_xcoords
-            ecoords = self.eccoords
+            ec_xcoords = self.ec_x_ccoords
+            ecoords = self.ec_ccoords
             
         if not hasattr(self,'opt_method'):
             self.opt_method = 'L-BFGS-B'
@@ -244,7 +297,7 @@ class net_optimizer():
 
         G = self.G
         node_xcoords = self.node_x_ccoords
-        node_coords = self.node_coords
+        node_coords = self.node_ccoords
         linker_length = self.linker_length
         opt_method = self.opt_method
         maxfun = self.maxfun
@@ -286,14 +339,19 @@ class net_optimizer():
         num_nodes = G.number_of_nodes()
 
         ###3D free rotation
-        if not hasattr(self,'optimized_rotations'):
+        if not hasattr(self,'saved_optimized_rotations'):
+            print('start to optimize the rotations')
             optimized_rotations,static_xxxx_positions = optimize_rotations(num_nodes,G,sorted_nodes,
                                                                                 sorted_edges_of_sortednodeidx, 
                                                                                 xxxx_positions_dict,opt_method,maxfun)
-        else:
-            print('use the optimized_rotations from the previous optimization')
-            optimized_rotations = self.optimized_rotations
+            if hasattr(self,'to_save_optimized_rotations_filename'):
+                np.save(self.to_save_optimized_rotations_filename+'.npy',optimized_rotations)
+                print('optimized rotations are saved to: ', self.to_save_optimized_rotations_filename+'.npy')
   
+        else:
+            print('use the loaded optimized_rotations from the previous optimization')
+            optimized_rotations = self.saved_optimized_rotations
+
         # Apply rotations
         rotated_node_positions = apply_rotations_to_atom_positions(optimized_rotations, G, sorted_nodes,node_positions_dict)
 
@@ -423,7 +481,9 @@ class net_optimizer():
             placed_edge = np.hstack((np.asarray(self.linker_atom), placed_edge_ccoords))
             sG.edges[(i,j)]['coords'] = x_i_x_j_middle_point
             sG.edges[(i,j)]['c_points']=placed_edge
+
             sG.edges[(i,j)]['f_points'] = np.hstack((placed_edge[:,0:2],cartesian_to_fractional(placed_edge[:,2:5],sc_unit_cell_inv))) #NOTE: modified add the atom type and atom name
+            
             _,sG.edges[(i,j)]['x_coords'] = fetch_X_atoms_ind_array(placed_edge,0,'X')
             #edges[(i,j)]=placed_edge
         #placed_node = {}
@@ -556,29 +616,29 @@ class net_optimizer():
         make the target MOF cell graph with only EDGE and V, link the XOO atoms to the EDGE
         always execute with make_supercell_ditopic
         """
-        if hasattr(self,'remove_node_list'):
-            remove_node_list = self.remove_node_list
-        else:
-            remove_node_list = []
-        if hasattr(self,'remove_edge_list'):
-            remove_edge_list = self.remove_edge_list
-        else:
-            remove_edge_list = []
+    #    if hasattr(self,'remove_node_list'):
+    #        remove_node_list = self.remove_node_list
+    #    else:
+    #        remove_node_list = []
+    #    if hasattr(self,'remove_edge_list'):
+    #        remove_edge_list = self.remove_edge_list
+    #    else:
+    #        remove_edge_list = []
 
         eG,_ = superG_to_eG_ditopic(self.superG)
-        to_remove_node_name = []
-        to_remove_edge_name = []
-        for n in eG.nodes():
-            if pname(n)!='EDGE':
-                if eG.nodes[n]['index'] in remove_node_list:
-                    to_remove_node_name.append(n)
-            if pname(n)=='EDGE':
-                if -1*eG.nodes[n]['index'] in remove_edge_list:
-                    to_remove_edge_name.append(n)
-        for n in to_remove_node_name+to_remove_edge_name:
-            eG.remove_node(n)
+    #   to_remove_node_name = []
+    #   to_remove_edge_name = []
+    #   for n in eG.nodes():
+    #       if pname(n)!='EDGE':
+    #           if eG.nodes[n]['index'] in remove_node_list:
+    #               to_remove_node_name.append(n)
+    #       if pname(n)=='EDGE':
+    #           if -1*eG.nodes[n]['index'] in remove_edge_list:
+    #               to_remove_edge_name.append(n)
+    #   for n in to_remove_node_name+to_remove_edge_name:
+    #       eG.remove_node(n)
        
-        eG = remove_node_by_index(eG,remove_node_list,remove_edge_list)
+    #    eG = remove_node_by_index(eG,remove_node_list,remove_edge_list)
         self.eG = eG
         return eG
     
@@ -601,6 +661,8 @@ class net_optimizer():
         """
         eG = self.eG
         self.eG = [eG.subgraph(c).copy() for c in nx.connected_components(eG)][0]
+        print('main fragment of the MOF cell is kept')#,len(self.eG.nodes()),'nodes')
+        #print('fragment size list:',[len(c) for c in nx.connected_components(eG)]) #debug
         return self.eG
 
     def make_supercell_range_cleaved_eG(self,buffer=0):
@@ -690,8 +752,8 @@ class net_optimizer():
             exvnode_oo_ccoords = unsaturated_vnode_xoo_dict[exvnode_xind_key]['oo_cpoints']
             node_xoo_ccoords = np.vstack([exvnode_x_ccoords,exvnode_oo_ccoords])
             #make the beginning point of the termination to the center of the oo atoms
-            node_oo_center_cvec = np.mean(exvnode_oo_ccoords[:,2:5],axis=0) #NOTE: modified add the atom type and atom name
-            node_xoo_cvecs = node_xoo_ccoords[:,2:5] - node_oo_center_cvec #NOTE: modified add the atom type and atom name
+            node_oo_center_cvec = np.mean(exvnode_oo_ccoords[:,2:5].astype(float),axis=0) #NOTE: modified add the atom type and atom name
+            node_xoo_cvecs = node_xoo_ccoords[:,2:5].astype(float) - node_oo_center_cvec #NOTE: modified add the atom type and atom name
             node_xoo_cvecs = node_xoo_cvecs.astype('float')
         #use record to record the rotation matrix for get rid of the repeat calculation
 
@@ -755,16 +817,16 @@ class net_optimizer():
 
 if __name__ == '__main__':
     start_time = time.time()
-    linker_cif = 'diedge.cif'
+    linker_pdb = 'edges/diedge.pdb'
     #in database by calling MOF family name and node metal type, dummy node True or False
     template_cif = 'fcu.cif'
-    node_cif = 'node2.cif'
+    node_pdb = 'data/nodes_database/12c_Zr.pdb'
     node_target_type = 'Zr'
 
     fcu = net_optimizer()
     fcu.analyze_template_ditopic(template_cif)
-    fcu.node_info(node_cif,node_target_type)
-    fcu.linker_info(linker_cif)
+    fcu.node_info(node_pdb)
+    fcu.linker_info(linker_pdb)
     fcu.optimize()
     fcu.set_supercell([1,1,1])
     print("--- %s seconds ---" % (time.time() - start_time))

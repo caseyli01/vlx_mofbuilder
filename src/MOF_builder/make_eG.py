@@ -67,6 +67,7 @@ def superG_to_eG_ditopic(superG):
     eG = nx.Graph()
     edge_count = 0
     node_count = 0
+    edge_record = []
     for n in superG.nodes():
         if superG.nodes[n]['note']=='V':
             node_count+=1   
@@ -84,6 +85,9 @@ def superG_to_eG_ditopic(superG):
     
             neighbors = list(superG.neighbors(n))
             for ne in neighbors:
+                if sorted([n,ne]) in edge_record:
+                    continue
+                edge_record.append(sorted([n,ne]))
                 edge_count-=1
                 eG.add_node('EDGE_'+str(edge_count),f_points=superG.edges[n,ne]['f_points'],
                                     fcoords=superG.edges[n,ne]['fcoords'],
@@ -128,13 +132,13 @@ def xoo_pair_ind_node(single_node_fc, sc_unit_cell):
      #the distance is in cartesian coordinates  
     # single_node_fc: coordinates of any node in the main fragment
     # sc_unit_cell: supercell unit cell matrix
-    single_node = np.hstack((single_node_fc[:,0:1], np.dot(sc_unit_cell, single_node_fc[:, 2:5].T).T)) #NOTE: modified to skip atom type
+    single_node = np.hstack((single_node_fc[:,0:1], np.dot(sc_unit_cell, single_node_fc[:, 2:5].astype(float).T).T)) #NOTE: modified to skip atom type
     xind, xs_coords = fetch_X_atoms_ind_array(single_node, 0, 'X')
     oind, os_coords = fetch_X_atoms_ind_array(single_node, 0, 'O')
     xs_os_dist_matrix = np.zeros((len(xs_coords), len(os_coords)))
     for i in range(len(xs_coords)):
         for j in range(len(os_coords)):
-            xs_os_dist_matrix[i, j] = np.linalg.norm(xs_coords[i,1:4] - os_coords[j,1:4])
+            xs_os_dist_matrix[i, j] = np.linalg.norm(xs_coords[i,1:4].astype(float) - os_coords[j,1:4].astype(float))
     xoo_ind_list = []
     for k in range(len(xind)):
         nearest_dict = find_surrounding_points(k, xs_os_dist_matrix, 2)
@@ -233,7 +237,7 @@ def addxoo2edge_ditopic(eG,sc_unit_cell):
     EDGE_nodes = [n for n in eG.nodes() if pname(n)=='EDGE']
     for n in EDGE_nodes:
         Xs_edge_indices,Xs_edge_fpoints = fetch_X_atoms_ind_array(eG.nodes[n]['f_points'],0,'X')
-        Xs_edge_ccpoints = np.hstack((Xs_edge_fpoints[:,0:1],np.dot(sc_unit_cell,Xs_edge_fpoints[:,2:5].T).T))#NOTE: modified to skip atom type
+        Xs_edge_ccpoints = np.hstack((Xs_edge_fpoints[:,0:1],np.dot(sc_unit_cell,Xs_edge_fpoints[:,2:5].astype(float).T).T))#NOTE: modified to skip atom type
         V_nodes = [i for i in eG.neighbors(n) if pname(i)!='EDGE']
         if len(V_nodes) == 0:
             #unsaturated_linker.append(n)
@@ -244,20 +248,21 @@ def addxoo2edge_ditopic(eG,sc_unit_cell):
         for v in V_nodes:
             #find the connected V node
             Xs_vnode_indices,Xs_vnode_fpoints = fetch_X_atoms_ind_array(eG.nodes[v]['f_points'], 0, 'X')
-            Xs_vnode_ccpoints = np.hstack((Xs_vnode_fpoints[:,0:1],np.dot(sc_unit_cell,Xs_vnode_fpoints[:,2:5].T).T))#NOTE: modified to skip atom type
+            Xs_vnode_ccpoints = np.hstack((Xs_vnode_fpoints[:,0:1],np.dot(sc_unit_cell,Xs_vnode_fpoints[:,2:5].astype(float).T).T))#NOTE: modified to skip atom type
             for ind in Xs_vnode_indices:
                 all_Xs_vnodes_ind.append([v,ind])
             all_Xs_vnodes_ccpoints = np.vstack((all_Xs_vnodes_ccpoints,Xs_vnode_ccpoints))
         edgeX_vnodeX_dist_matrix = np.zeros((len(Xs_edge_ccpoints),len(all_Xs_vnodes_ccpoints)))
         for i in range(len(Xs_edge_ccpoints)):
             for j in range(len(all_Xs_vnodes_ccpoints)):
-                edgeX_vnodeX_dist_matrix[i,j] = np.linalg.norm(Xs_edge_ccpoints[i,1:4]-all_Xs_vnodes_ccpoints[j,1:4])
+                edgeX_vnodeX_dist_matrix[i,j] = np.linalg.norm(Xs_edge_ccpoints[i,1:4].astype(float)-all_Xs_vnodes_ccpoints[j,1:4].astype(float))
         for k in range(len(Xs_edge_fpoints)):
             n_j,min_dist,_=find_nearest_neighbor(k,edgeX_vnodeX_dist_matrix)
-            if min_dist > 3.0:
-                unsaturated_linker.append(n)
-                print('no xoo for edge node, this linker is a dangling unsaturated linker',n)
-                continue
+            #if min_dist > 3.5:
+            #    
+            #    unsaturated_linker.append(n)
+            #    print(min_dist,'no xoo for edge node, this linker is a dangling unsaturated linker',n)
+            #    continue
             #add the xoo to the edge node
             nearest_vnode = all_Xs_vnodes_ind[n_j][0]
             nearest_X_ind_in_vnode = all_Xs_vnodes_ind[n_j][1]

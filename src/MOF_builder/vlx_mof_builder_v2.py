@@ -1,22 +1,54 @@
 import time 
-from v2_builder import net_optimizer
+import numpy as np
+import os
+from v2_builder import net_optimizer,pname
+from prepare_class import prepare
 
 class mof_builder():
-    def __init__(self, mof_family):
-        self.mof_family = mof_family
+    def __init__(self):
         #seach mof_family name in the config file # if not found, raise error and ask user to generate the template cif and add it to the config file
         #from config get linker topic, node metal type, dummy node True or False, template cif, node cif
         #in database by calling MOF family name and node metal type, dummy node True or False
-        self.template_cif = 'fcu.cif'
-        self.node_cif = 'node2.cif'
-        self.node_target_type = 'Zr'
+        preparation = prepare()
+        self.preparation = preparation
+        print('MOF builder is initialized, please prepare the building material by calling the preparation driver')
+        print('1.preparation.select_mof_family()')
+        print('2.preparation.select_node_metal()')
+        print('3.preparation.use_dummy_node()')
+        print('4.preparation.fetch_node()')
+        print('5.preparation.fetch_linker()')
+        print('***check the preparation status by calling preparation_check()***') 
+    
+    def preparation_check(self):
+        preparation = self.preparation
+        if preparation.check_status():
+            
+            print('-' * 80)
+            print(' '*20,'Preparation is completed',' '*20)
+            print('-' * 80)
+
+            print('MOF builder is ready to build')
+            self.mof_family = preparation.mof_family
+            self.template_cif = preparation.selected_template_cif_file
+            self.node_pdb = preparation.selected_node_pdb_file
+            self.node_target_type = preparation.node_metal
+            self.linker_pdb = preparation.selected_linker_edge_pdb
+            self.linker_center_pdb = preparation.selected_linker_center_pdb # could be None if ditopic linker
+            self.linker_topic = preparation.linker_topic
+            self.linker_xyz = preparation.linker_xyz
+        else:
+            print('Error: Could not find the required files')
+            print('Please redo the preparation steps')
+            return
+  
+ 
+
+    
     
     def set_supercell(self, supercell):
         self.supercell = supercell
 
-    def set_linker_xyz(self, linker_xyz):
-        self.linker_xyz = linker_xyz
-        self.linker_cif = 'diedge.cif'
+   
     
     def set_rotation_optimizer_maxfun(self, maxfun):
         self.rotation_optimizer_maxfun = maxfun
@@ -54,94 +86,128 @@ class mof_builder():
     def set_remove_edge_list(self, remove_edge_list):
         self.remove_edge_list = remove_edge_list
     
+    def save_optimized_rotations(self, filename):
+        self.optimized_rotations_filename = filename
 
-
+    def use_saved_optimized_rotations_npy(self, saved_optimized_rotations):
+        saved_optimized_rotations = saved_optimized_rotations+'.npy'
+      
+        if os.path.exists(saved_optimized_rotations):
+            self.saved_optimized_rotations = np.load(saved_optimized_rotations, allow_pickle=True)
+            print('Optimized rotations are loaded from: ', saved_optimized_rotations)
+        else:
+            print(f'Could not find the saved optimized rotations:  {saved_optimized_rotations} will start the optimization from the beginning')
+            return
 
     
     def build(self):
         #check before building
-        if not hasattr(self, 'linker_xyz'):
-            print('linker_xyz is not set')
-            raise ValueError('linker_xyz is not set')
         if not hasattr(self, 'supercell'):
             self.supercell = [1,1,1]
-        if not hasattr(self, 'template_cif'):
-            print('template_cif is not set')
-            raise ValueError('template_cif is not set')
-        if not hasattr(self, 'node_cif'):
-            print('node_cif is not set')
-            raise ValueError('node_cif is not set')
-        if not hasattr(self, 'node_target_type'):
-            print('node_target_type is not set')
-            raise ValueError('node_target_type is not set')
-        if not hasattr(self, 'linker_cif'):
-            print('linker_cif is not set')
-            raise ValueError('linker_cif is not set')
-        if not hasattr(self, 'linker_topic'):
-            print('linker_topic is not set')
-            raise ValueError('linker_topic is not set')
-        if not hasattr(self, 'dummy_node'):
-            self.dummy_node = False
-        if not hasattr(self, 'mof_family'):
-            print('mof_family is not set, the user defined topology will be used: ',self.template_cif)
 
         if self.linker_topic == 2:
             print('ditopic mof builder driver is called')
             start_time = time.time()
-            linker_cif = self.linker_cif
+            linker_pdb = self.linker_pdb
             template_cif = self.template_cif
-            node_cif = self.node_cif
-            node_target_type = self.node_target_type
+            node_pdb = self.node_pdb
             supercell = self.supercell
-            net = net_optimizer()
-            net.analyze_template_ditopic(template_cif)
-            net.node_info(node_cif,node_target_type)
-            net.linker_info(linker_cif)
-            net.optimize()
-            print("--- %s seconds ---" % (time.time() - start_time))
-            net.set_supercell(supercell)
-            net.place_edge_in_net()
-            net.make_supercell_ditopic()
-            net.make_eG_from_supereG_ditopic()
-            net.main_frag_eG()
-            net.make_supercell_range_cleaved_eG()
-            net.add_xoo_to_edge_ditopic()
-            net.find_unsaturated_node_eG()
-            net.set_node_terminamtion('methyl.pdb')
-            net.add_terminations_to_unsaturated_node()
-            net.remove_xoo_from_node()
-            self.net = net
+            self.net = net_optimizer()
+
+            if hasattr(self, 'saved_optimized_rotations'):
+                self.net.load_saved_optimized_rotations(self.saved_optimized_rotations)
+            if hasattr(self, 'optimized_rotations_filename'):
+                self.net.to_save_optimized_rotations(self.optimized_rotations_filename)
+             
+            self.net.analyze_template_ditopic(template_cif)
+            self.net.node_info(node_pdb)
+            self.net.linker_info(linker_pdb)
+            self.net.optimize()
+            print('-' * 80)
+            print(' '*15,"Building time cost: %.5f seconds " % (time.time() - start_time))
+            print('-' * 80)
+           
+            self.net.set_supercell(supercell)
+            self.net.place_edge_in_net()
+            self.net.make_supercell_ditopic()
+            self.net.make_eG_from_supereG_ditopic()
+            self.net.main_frag_eG()
+            self.net.make_supercell_range_cleaved_eG()
+            self.net.add_xoo_to_edge_ditopic()
+            self.net.find_unsaturated_node_eG()
+            if hasattr(self, 'node_termination'):
+                self.net.set_node_terminamtion(self.node_termination)
+            #default termination is methyl in data folder 
+            self.net.set_node_terminamtion(os.path.join(self.preparation.data_path, 'terminations_database/methyl.pdb'))
+            self.net.add_terminations_to_unsaturated_node()
+            self.net.remove_xoo_from_node()
+            #self.net = net
 
 
     def set_gro_name(self, gro_name):
         self.gro_name = gro_name
 
     def write_gro(self):
-        if not hasattr(self, 'gro_name'):
-            self.gro_name = 'mof_'+str(self.mof_family.split('.')[0])+'_'+str(self.linker_xyz.split('.')[0])
-            print('gro_name is not set, will be saved as: ',self.gro_name,'.gro')
+        if hasattr(self,'saved_eG'):
+            self.net.eG = self.saved_eG
+            self.net.write_node_edge_node_gro(self.gro_name)
 
+        if not hasattr(self, 'gro_name'):
+            self.gro_name = 'mof_'+str(self.mof_family.split('.')[0])+'_'+self.linker_xyz.strip('.xyz')
+            print('gro_name is not set, will be saved as: ',self.gro_name+'.gro')
+        print('writing gro file')
+        print('nodes:',len(self.net.eG.nodes()), 'edges:',len(self.net.eG.edges()))
         self.net.write_node_edge_node_gro(self.gro_name)
             #temp_save_eGterm_gro(net.eG,net.sc_unit_cell) #debugging
-    
+#functions are under construction
     def make_defects_missing (self):
-        defective_net = self.net
+        self.saved_eG = self.net.eG.copy() #save the original eG before making defects
+        self.defective_net = self.net
+        print('saved_eG is saved','nodes: ',len(self.saved_eG.nodes), 'edges: ',len(self.saved_eG.edges))
+
+        dG = self.net.eG.copy()
+        remove_node_list = []
+        remove_edge_list = []
         if hasattr(self, 'remove_node_list'):
             remove_node_list = self.remove_node_list
         if hasattr(self, 'remove_edge_list'):
             remove_edge_list = self.remove_edge_list
+            remove_edge_list = [str(int(i)- len(self.net.nodes_eG))for i in remove_edge_list ] #TODO: check if it is correct
         
-        defective_net.remove_node_edge(remove_node_list, remove_edge_list) #TODO:
-        defective_net.make_eG_from_supereG_ditopic()
-        defective_net.main_frag_eG()
-        defective_net.make_supercell_range_cleaved_eG()
-        defective_net.add_xoo_to_edge_ditopic()
-        defective_net.find_unsaturated_node_eG()
-        defective_net.set_node_terminamtion(self.node_termination)
-        defective_net.add_terminations_to_unsaturated_node()
-        defective_net.remove_xoo_from_node()
+        #defective_net.remove_node_edge(remove_node_list, remove_edge_list) #TODO:
 
-        self.defective_net = defective_net
+
+        def extract_node_name_from_gro_resindex(res_index, node_array_list):
+            node_array = np.vstack(node_array_list)
+            nodes_name = set()
+            for node_ind in res_index:
+                node_name = node_array[node_array[:,0]==str(node_ind)][:,-1]
+                name_set = set(node_name)
+                nodes_name = nodes_name.union(name_set)
+            return nodes_name
+        to_remove_nodes_name = extract_node_name_from_gro_resindex(remove_node_list, self.net.nodes_eG)
+        to_remove_edges_name = extract_node_name_from_gro_resindex(remove_edge_list, self.net.edges_eG)
+
+        
+        for node_name in to_remove_nodes_name:
+            dG.remove_node(node_name)
+        for edge_name in to_remove_edges_name:
+            neighbors = list(dG.neighbors(edge_name))
+            if len(neighbors) == 2: #ditopic linker case
+                dG.remove_edge(neighbors[0], neighbors[1])
+            dG.remove_node(edge_name)
+
+        print('defective eG is updated','nodes: ',len(dG.nodes), 'edges: ', len(dG.edges))
+      
+        self.defective_net.eG = dG
+        self.defective_net.main_frag_eG()
+        #sort subgraph by connectivity
+        self.defective_net.make_supercell_range_cleaved_eG()
+        #self.defective_net.add_xoo_to_edge_ditopic() or will add xoo again
+        self.defective_net.find_unsaturated_node_eG()
+        self.defective_net.add_terminations_to_unsaturated_node()
+        self.defective_net.remove_xoo_from_node()
+ 
     
     def make_defects_exchange(self):
         defective_net = self.net
@@ -161,18 +227,39 @@ class mof_builder():
         self.defect_gro_name = defect_gro_name
 
     def write_defect_gro(self): 
-        if not hasattr(self, 'defective_net'):
-            print('defective_net is not set')
-            print('make_defects_missing() or make_defects_exchange() should be called before write_defect_gro(), or you can write with write_gro()')
-            return
+        #if not hasattr(self, 'defective_net'):
+        #    print('defective_net is not set')
+        #    print('make_defects_missing() or make_defects_exchange() should be called before write_defect_gro(), or you can write with write_gro()')
+        #    return
 
         if not hasattr(self, 'defect_gro_name'):
-            self.defect_gro_name = 'defective_mof_'+str(self.mof_family.split('.')[0])+'_'+str(self.linker_xyz.split('.')[0])
-            print('defect_gro_name is not set, will be saved as: ',self.defect_gro_name,'.gro')
+            self.defect_gro_name = 'defective_mof_'+str(self.mof_family.split('.')[0])+'_'+self.linker_xyz.strip('.xyz')
+            print('defect_gro_name is not set, will be saved as: ',self.defect_gro_name+'.gro')
+        print('writing defective gro file')
 
         self.defective_net.write_node_edge_node_gro(self.defect_gro_name)
         
     
 
 
-    
+if __name__ =='__main__':
+    mof = mof_builder()
+    mof.preparation.select_mof_family('UiO-67')
+    mof.preparation.select_node_metal('Zr')
+    mof.preparation.use_dummy_node(True)
+    mof.preparation.fetch_node()
+    mof.preparation.fetch_linker('ndi.xyz')
+    mof.preparation_check()
+    mof.rotation_optimizer_maxfun = 1000
+    mof.use_saved_optimized_rotations_npy('rota')
+    #save optimized rotations to numpy file for later use
+    mof.save_optimized_rotations('rota')
+    mof.set_supercell([1,1,1])
+    mof.build()
+    mof.write_gro()
+    mof.set_remove_edge_list([30,31,32])
+    mof.set_remove_node_list([])
+    mof.make_defects_missing()
+    mof.write_defect_gro()
+        
+     

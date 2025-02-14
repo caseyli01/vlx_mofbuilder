@@ -189,7 +189,8 @@ def extract_node_edge_term(tG,sc_unit_cell):
             postions = tG.nodes[n]['f_points']
             edges_check_set.add(len(postions))
             if len(edges_check_set) >1:
-                raise ValueError('edge index is not continuous')
+                print(edges_check_set)
+                raise ValueError('edge atom number is not continuous')
             edge_res_num+=1
             edges_tG.append(np.hstack((np.tile(np.array([edge_res_num,'EDGE']), (len(postions), 1)), #residue number and residue name
                                         postions[:, 1:2], #atom type (element)
@@ -197,50 +198,49 @@ def extract_node_edge_term(tG,sc_unit_cell):
                                         postions[:, 0:1], #atom name
                                         np.tile(np.array([n]), (len(postions), 1))))) #edge name in eG is added to the last column
 
-    nodes_tG = np.vstack(nodes_tG)
-    terms_tG = np.vstack(terms_tG)
-    edges_tG = np.vstack(edges_tG)
+    #nodes_tG = np.vstack(nodes_tG)
+    #terms_tG = np.vstack(terms_tG)
+    #edges_tG = np.vstack(edges_tG)
     return nodes_tG,edges_tG,terms_tG,node_res_num,edge_res_num,term_res_num
 
 
 
-
-
-
-
-
-def convert_node_array_to_gro_lines(line,line_num,res_num_start,name):
-    line_num+=1
-    value_atom_number = int(line_num)  # atom_number
-    value_label = re.sub('\d','',line[2]) # atom_label       
-    value_resname = str(name)[0:3]#+str(eG.nodes[n]['index'])  # residue_name
-    value_resnumber = int(res_num_start+int(line[0])) # residue number
-    value_x = 0.1*float(line[3])  # x
-    value_y = 0.1*float(line[4])  # y
-    value_z = 0.1*float(line[5])  # z
-    formatted_line = "%5d%-5s%5s%5d%8.3f%8.3f%8.3f" % (
-        value_resnumber,
-        value_resname,
-        value_label,
-        value_atom_number,
-        value_x,
-        value_y,
-        value_z,
-    )
-    return formatted_line,line_num
+def convert_node_array_to_gro_lines(array,line_num_start,res_num_start,name):
+    formatted_gro_lines = []
+    for i in range(len(array)):
+        line = array[i]
+        ind_inres = i+1
+        value_atom_number_in_gro = int(ind_inres+line_num_start)  # atom_number
+        value_label = re.sub('\d','',line[2])+str(ind_inres) # atom_label       
+        value_resname = str(name)[0:3]#+str(eG.nodes[n]['index'])  # residue_name
+        value_resnumber = int(res_num_start+int(line[0])) # residue number
+        value_x = 0.1*float(line[3])  # x
+        value_y = 0.1*float(line[4])  # y
+        value_z = 0.1*float(line[5])  # z
+        formatted_line = "%5d%-5s%5s%5d%8.3f%8.3f%8.3f" % (
+            value_resnumber,
+            value_resname,
+            value_label,
+            value_atom_number_in_gro,
+            value_x,
+            value_y,
+            value_z,
+        )
+        formatted_gro_lines.append(formatted_line+"\n")
+    return formatted_gro_lines,value_atom_number_in_gro
 
 def merge_node_edge_term(nodes_tG,edges_tG,terms_tG,node_res_num,edge_res_num):
     merged_node_edge_term = []
     line_num = 0
-    for line in nodes_tG:
-        formatted_line,line_num = convert_node_array_to_gro_lines(line,line_num,0,'NOD')
-        merged_node_edge_term.append(formatted_line + "\n")
-    for line in edges_tG:
-        formatted_line,line_num = convert_node_array_to_gro_lines(line,line_num,node_res_num,'EDG')
-        merged_node_edge_term.append(formatted_line + "\n")
-    for line in terms_tG:
-        formatted_line,line_num = convert_node_array_to_gro_lines(line,line_num,node_res_num+edge_res_num,'TER')
-        merged_node_edge_term.append(formatted_line + "\n")
+    for node in nodes_tG:
+        formatted_gro_lines,line_num = convert_node_array_to_gro_lines(node,line_num,0,'NOD')
+        merged_node_edge_term+=formatted_gro_lines
+    for edge in edges_tG:
+        formatted_gro_lines,line_num = convert_node_array_to_gro_lines(edge,line_num,node_res_num,'EDG')
+        merged_node_edge_term+=formatted_gro_lines
+    for term in terms_tG:
+        formatted_gro_lines,line_num = convert_node_array_to_gro_lines(term,line_num,node_res_num+edge_res_num,'TER')
+        merged_node_edge_term+=formatted_gro_lines
     return merged_node_edge_term
 
 def save_node_edge_term_gro(merged_node_edge_term,gro_name):

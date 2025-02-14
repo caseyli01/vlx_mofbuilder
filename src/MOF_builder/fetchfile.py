@@ -71,10 +71,14 @@ def read_mof_top_dict(data_path):
         mofs = lines[1:]
     mof_top_dict = {}
     for mof in mofs:
-        mof_top_dict[mof.split()[0]]={
-            'node_connectivity':int(mof.split()[1]),'metal':mof.split()[2],
-            'linker_topic':int(mof.split()[3]),'topology':mof.split()[-1]
-            }
+        mof_name = mof.split()[0]
+        if mof_name not in mof_top_dict.keys():
+            mof_top_dict[mof_name]={
+                'node_connectivity':int(mof.split()[1]),'metal':[mof.split()[2]],
+                'linker_topic':int(mof.split()[3]),'topology':mof.split()[-1]
+                }
+        else:
+            mof_top_dict[mof_name]['metal'].append(mof.split()[2])
     return mof_top_dict
 
 
