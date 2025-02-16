@@ -15,6 +15,7 @@ def match_vectors(arr1, arr2, num):
 	sorted_distances_arr2 = sort_by_distance(arr2)
 
 	# Select the indices by distance matching in limited number
+
 	indices_arr1 = [sorted_distances_arr1[j][1] for j in range(num)]
 	indices_arr2 = [sorted_distances_arr2[j][1] for j in range(num)]
 
@@ -31,7 +32,7 @@ def superimpose(arr1, arr2,min_rmsd=1e6):
 	arr2 = np.asarray(arr2)
 	best_rot, best_tran = np.eye(3), np.zeros(3)
 	
-	if len(arr1) < 7:
+	if len(arr1) < 3:
 		for perm in itertools.permutations(arr1):
 			perm = np.asarray(perm)
 			sup.set(arr2, perm)
@@ -42,7 +43,7 @@ def superimpose(arr1, arr2,min_rmsd=1e6):
 				best_rot, best_tran = sup.get_rotran()
 
 	else:
-		arr1, arr2 = match_vectors(arr1, arr2, 6)
+		arr1, arr2 = match_vectors(arr1, arr2, 2)
 		for perm in itertools.permutations(arr1):
 			perm = np.asarray(perm)
 			sup.set(arr2, perm)

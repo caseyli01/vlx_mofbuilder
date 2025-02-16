@@ -1,7 +1,10 @@
 import numpy as np
 import re
 import networkx as nx
-from _place_node_edge import fractional_to_cartesian
+from _place_node_edge import fractional_to_cartesian,cartesian_to_fractional
+from _superimpose import superimpose
+from _readcif_pdb import process_node_pdb
+from add_dummy2node import nn
 from makesuperG import pname
 
 
@@ -158,27 +161,34 @@ def extract_node_edge_term(tG,sc_unit_cell):
     term_res_num = 0
     edge_res_num = 0
     nodes_check_set = set()
+    nodes_name_set = set()
     edges_check_set = set()
+    edges_name_set = set()
     terms_check_set = set()
+    terms_name_set = set()
     for n in tG.nodes():
         if pname(n) != 'EDGE':
             postions = tG.nodes[n]['noxoo_f_points']
+            name = tG.nodes[n]['name']
             nodes_check_set.add(len(postions))
-            if len(nodes_check_set) >1:
+            nodes_name_set.add(name)
+            if len(nodes_check_set) > len(nodes_name_set):
                 raise ValueError('node index is not continuous')
             node_res_num+=1
-            nodes_tG.append(np.hstack((np.tile(np.array([node_res_num,'NODE']), (len(postions), 1)), #residue number and residue name
+            nodes_tG.append(np.hstack((np.tile(np.array([node_res_num,name]), (len(postions), 1)), #residue number and residue name
                                        postions[:, 1:2], #atom type (element)
                                        fractional_to_cartesian(postions[:, 2:5], sc_unit_cell), #Cartesian coordinates
                                        postions[:, 0:1], #atom name
                                        np.tile(np.array([n]), (len(postions), 1))))) #node name in eG is added to the last column
             for term_ind_key,c_positions in tG.nodes[n]['term_c_points'].items():
                 terms_check_set.add(len(c_positions))
-                if len(terms_check_set) >1:
+                name = 'T'+ tG.nodes[n]['name']
+                terms_name_set.add(name)
+                if len(terms_check_set) > len(terms_name_set):
                     raise ValueError('term index is not continuous')
 
                 term_res_num+=1
-                terms_tG.append(np.hstack((np.tile(np.array([term_res_num,'TERM']), (len(c_positions), 1)),  #residue number and residue name
+                terms_tG.append(np.hstack((np.tile(np.array([term_res_num,name]), (len(c_positions), 1)),  #residue number and residue name
                                            c_positions[:, 1:2], #atom type (element)
                                            c_positions[:, 2:5], #Cartesian coordinates
                                            c_positions[:, 0:1], #atom name
@@ -187,12 +197,14 @@ def extract_node_edge_term(tG,sc_unit_cell):
             
         elif pname(n) == 'EDGE':
             postions = tG.nodes[n]['f_points']
+            name = tG.nodes[n]['name']
             edges_check_set.add(len(postions))
-            if len(edges_check_set) >1:
+            edges_name_set.add(name)
+            if len(edges_check_set) > len(edges_name_set):
                 print(edges_check_set)
                 raise ValueError('edge atom number is not continuous')
             edge_res_num+=1
-            edges_tG.append(np.hstack((np.tile(np.array([edge_res_num,'EDGE']), (len(postions), 1)), #residue number and residue name
+            edges_tG.append(np.hstack((np.tile(np.array([edge_res_num,name]), (len(postions), 1)), #residue number and residue name
                                         postions[:, 1:2], #atom type (element)
                                         fractional_to_cartesian(postions[:, 2:5], sc_unit_cell), #Cartesian coordinates
                                         postions[:, 0:1], #atom name
@@ -205,11 +217,12 @@ def extract_node_edge_term(tG,sc_unit_cell):
 
 
 
-def convert_node_array_to_gro_lines(array,line_num_start,res_num_start,name):
+def convert_node_array_to_gro_lines(array,line_num_start,res_num_start):
     formatted_gro_lines = []
     for i in range(len(array)):
         line = array[i]
         ind_inres = i+1
+        name = line[1]
         value_atom_number_in_gro = int(ind_inres+line_num_start)  # atom_number
         value_label = re.sub('\d','',line[2])+str(ind_inres) # atom_label       
         value_resname = str(name)[0:3]#+str(eG.nodes[n]['index'])  # residue_name
@@ -233,13 +246,13 @@ def merge_node_edge_term(nodes_tG,edges_tG,terms_tG,node_res_num,edge_res_num):
     merged_node_edge_term = []
     line_num = 0
     for node in nodes_tG:
-        formatted_gro_lines,line_num = convert_node_array_to_gro_lines(node,line_num,0,'NOD')
+        formatted_gro_lines,line_num = convert_node_array_to_gro_lines(node,line_num,0)
         merged_node_edge_term+=formatted_gro_lines
     for edge in edges_tG:
-        formatted_gro_lines,line_num = convert_node_array_to_gro_lines(edge,line_num,node_res_num,'EDG')
+        formatted_gro_lines,line_num = convert_node_array_to_gro_lines(edge,line_num,node_res_num)
         merged_node_edge_term+=formatted_gro_lines
     for term in terms_tG:
-        formatted_gro_lines,line_num = convert_node_array_to_gro_lines(term,line_num,node_res_num+edge_res_num,'TER')
+        formatted_gro_lines,line_num = convert_node_array_to_gro_lines(term,line_num,node_res_num+edge_res_num)
         merged_node_edge_term+=formatted_gro_lines
     return merged_node_edge_term
 
@@ -314,4 +327,105 @@ def temp_save_eGterm_gro(eG,sc_unit_cell):
         f.writelines(head)
         f.writelines(newgro)
         f.writelines(tail)
- 
+
+def replace_edges_by_callname(edge_n_list,eG,sc_unit_cell_inv,new_linker_pdb,prefix = 'R'):
+
+    new_linker_atoms, new_linker_ccoords,new_linker_x_ccoords = process_node_pdb(new_linker_pdb,'X')
+    for edge_n in edge_n_list:
+        edge_n = edge_n
+        edge_f_points = eG.nodes[edge_n]['f_points']
+        x_indices = [i for i in range(len(edge_f_points)) if nn(edge_f_points[i][0]) == 'X']
+        edge_x_points = edge_f_points[x_indices] 
+        edge_com = np.mean(edge_x_points[:,2:5].astype(float),axis=0)
+        edge_x_fcoords = edge_x_points[:,2:5].astype(float)-edge_com
+
+        new_linker_x_fcoords = cartesian_to_fractional(new_linker_x_ccoords, sc_unit_cell_inv)
+        new_linker_fcoords = cartesian_to_fractional(new_linker_ccoords, sc_unit_cell_inv)
+
+        _,rot,trans = superimpose(new_linker_x_fcoords, edge_x_fcoords)
+        replaced_linker_fcoords = np.dot(new_linker_fcoords, rot) + edge_com
+        replaced_linker_f_points = np.hstack((new_linker_atoms, replaced_linker_fcoords))
+
+        eG.nodes[edge_n]['f_points'] = replaced_linker_f_points
+        eG.nodes[edge_n]['name'] = prefix+eG.nodes[edge_n]['name']
+
+    return eG
+
+#the following functions are used for the split node to metal, hho,ho,o and update name and residue number
+
+def extract_node_name_from_gro_resindex(res_index, node_array_list):
+    node_array = np.vstack(node_array_list)
+    nodes_name = set()
+    for node_ind in res_index:
+        node_name = node_array[node_array[:,0]==str(node_ind)][:,-1]
+        name_set = set(node_name)
+        nodes_name = nodes_name.union(name_set)
+    return nodes_name
+
+
+def make_dummy_split_node_dict(dummy_node_name):
+    node_split_dict = {}
+    dict_path= dummy_node_name.split('.')[0]+'_dict'
+    with open(dict_path,'r') as f:
+        lines = f.readlines()
+    node_res_counts = 0
+    for li in lines:
+        li= li.strip('\n')
+        key = li[:20].strip(' ')
+        value = li[-4:].strip(' ')
+        node_split_dict[key]=int(value)
+    return node_split_dict
+
+def chunk_array(chunk_list,array,chunk_num,chunksize):
+    chunk_list.extend(array[i * chunksize:(i + 1) * chunksize] for i in range(chunk_num))
+    return chunk_list
+
+def rename_node_arr(node_split_dict,node_arr):
+    metal_count = node_split_dict['METAL_count']
+    dummy_len = int(node_split_dict['dummy_res_len'])
+    metal_num = metal_count*dummy_len
+    hho_num = node_split_dict['HHO_count']*3
+    ho_num = node_split_dict['HO_count']*2
+    o_num = node_split_dict['O_count']*1
+    metal_range = metal_num
+    hho_range = metal_range+hho_num
+    ho_range = hho_range+ho_num
+    o_range = ho_range+o_num
+    #print(metal_range,hho_range,ho_range,o_range) #debug
+
+    metals_list = []
+    hhos_list = []
+    hos_list= []
+    os_list = []
+    for idx in set(node_arr[:,0]):
+        idx_arr = node_arr[node_arr[:,0]==idx]
+        if metal_num > 0:
+            metal = idx_arr[0:metal_range].copy()
+            metal[:,1] = 'METAL'
+            metals_list = chunk_array(metals_list,metal,node_split_dict['METAL_count'],dummy_len)
+        if hho_num > 0:
+            hho = idx_arr[metal_range:hho_range].copy()
+            hho[:,1] = 'HHO' 
+            hhos_list = chunk_array(hhos_list,hho,node_split_dict['HHO_count'],3)
+        if ho_num > 0:
+            ho = idx_arr[hho_range:ho_range].copy()
+            ho[:,1] = 'HO'
+            hos_list = chunk_array(hos_list,ho,node_split_dict['HO_count'],2)
+        if o_num > 0:
+            o = idx_arr[ho_range:o_range].copy()
+            o[:,1] = 'O' 
+            os_list = chunk_array(os_list,o,node_split_dict['O_count'],1)
+  
+    return metals_list,hhos_list,hos_list,os_list
+
+def merge_metal_list_to_node_array(merged_node_edge_term,metals_list,line_num,res_count):
+    if any([len(metal)==0 for metal in metals_list]):
+        return merged_node_edge_term,line_num,res_count
+    for i in range(len(metals_list)):
+        metal = metals_list[i]
+        metal[:,0] = i+1
+        formatted_gro_lines,line_num = convert_node_array_to_gro_lines(metal,line_num,res_count)
+        merged_node_edge_term+=formatted_gro_lines
+    res_count+=len(metals_list)
+    return merged_node_edge_term,line_num,res_count
+

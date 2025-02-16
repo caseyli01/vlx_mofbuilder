@@ -75,6 +75,7 @@ def superG_to_eG_ditopic(superG):
                         fcoords=superG.nodes[n]['fcoords'],
                         type=superG.nodes[n]['type'],
                         note=superG.nodes[n]['note'],
+                        name = 'NODE',
                         index = node_count)
             #print('add node',n,'type',superG.nodes[n]['type']) #debug
             superG.nodes[n]['index'] = node_count
@@ -92,6 +93,7 @@ def superG_to_eG_ditopic(superG):
                 eG.add_node('EDGE_'+str(edge_count),f_points=superG.edges[n,ne]['f_points'],
                                     fcoords=superG.edges[n,ne]['fcoords'],
                                     type = 'Edge',
+                                    name = 'EDGE',
                                     note = 'E',
                                     index = edge_count)
                 eG.add_edge(n,ne,index='E_'+str(edge_count),type='real')

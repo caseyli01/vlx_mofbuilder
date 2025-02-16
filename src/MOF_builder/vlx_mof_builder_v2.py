@@ -3,6 +3,7 @@ import numpy as np
 import os
 from v2_builder import net_optimizer,pname
 from prepare_class import prepare
+from v2_functions import replace_edges_by_callname,extract_node_name_from_gro_resindex,save_node_edge_term_gro,make_dummy_split_node_dict,rename_node_arr,merge_metal_list_to_node_array
 
 class mof_builder():
     def __init__(self):
@@ -77,8 +78,7 @@ class mof_builder():
     def set_vitual_edge_search(self, vitual_edge_search):
         self.vitual_edge = True
     
-    def set_dummy_node(self, dummy_node):
-        self.dummy_node = dummy_node
+
     
     def set_remove_node_list(self, remove_node_list):
         self.remove_node_list = remove_node_list
@@ -149,8 +149,10 @@ class mof_builder():
 
     def write_gro(self):
         if hasattr(self,'saved_eG'):
+            print('saved_eG is found, will write the preserved eG')
             self.net.eG = self.saved_eG
             self.net.write_node_edge_node_gro(self.gro_name)
+            return
 
         if not hasattr(self, 'gro_name'):
             self.gro_name = 'mof_'+str(self.mof_family.split('.')[0])+'_'+self.linker_xyz.strip('.xyz')
@@ -173,18 +175,8 @@ class mof_builder():
         if hasattr(self, 'remove_edge_list'):
             remove_edge_list = self.remove_edge_list
             remove_edge_list = [str(int(i)- len(self.net.nodes_eG))for i in remove_edge_list ] #TODO: check if it is correct
-        
-        #defective_net.remove_node_edge(remove_node_list, remove_edge_list) #TODO:
 
 
-        def extract_node_name_from_gro_resindex(res_index, node_array_list):
-            node_array = np.vstack(node_array_list)
-            nodes_name = set()
-            for node_ind in res_index:
-                node_name = node_array[node_array[:,0]==str(node_ind)][:,-1]
-                name_set = set(node_name)
-                nodes_name = nodes_name.union(name_set)
-            return nodes_name
         to_remove_nodes_name = extract_node_name_from_gro_resindex(remove_node_list, self.net.nodes_eG)
         to_remove_edges_name = extract_node_name_from_gro_resindex(remove_edge_list, self.net.edges_eG)
 
@@ -208,19 +200,38 @@ class mof_builder():
         self.defective_net.add_terminations_to_unsaturated_node()
         self.defective_net.remove_xoo_from_node()
  
-    
+    #def set_exchange_node_list(self, exchange_node_list): #avoid node exchange
+    #    self.exchange_node_list = exchange_node_list
+    def set_exchange_edge_list(self, exchange_edge_list):
+        self.exchange_edge_list = exchange_edge_list
+    #def set_to_exchange_node_pdb(self, to_exchange_node_pdb): #avoid node exchange
+    #    self.to_exchange_node_pdb = to_exchange_node_pdb
+    def set_to_exchange_edge_pdb(self, to_exchange_edge_pdb):
+        self.to_exchange_edge_pdb = to_exchange_edge_pdb
+
     def make_defects_exchange(self):
         defective_net = self.net
-        if hasattr(self, 'exchange_node_list'):
-            exchange_node_list = self.exchange_node_list
+        #if hasattr(self, 'exchange_node_list'):
+        #    exchange_node_list = self.exchange_node_list
+        #    exchange_nodes_name = extract_node_name_from_gro_resindex(exchange_node_list, self.net.nodes_eG)
         if hasattr(self, 'exchange_edge_list'):
             exchange_edge_list = self.exchange_edge_list
-        if hasattr(self, 'to_exchange_node_pdb'):
-            to_exchange_node_pdb = self.to_exchange_node_pdb
+            exchange_edge_list = [str(int(i)- len(self.net.nodes_eG))for i in exchange_edge_list ] #TODO: check if it is correct
+            exchange_edges_name = extract_node_name_from_gro_resindex(exchange_edge_list, self.net.edges_eG)
+
+        #if hasattr(self, 'to_exchange_node_pdb'):
+        #    to_exchange_node_pdb = self.to_exchange_node_pdb
         if hasattr(self, 'to_exchange_edge_pdb'):
             to_exchange_edge_pdb = self.to_exchange_edge_pdb
         #TODO:
-        defective_net.exchange_node_edge(exchange_node_list, exchange_edge_list, to_exchange_node_pdb, to_exchange_edge_pdb)
+
+
+        if hasattr(self, 'exchange_edge_list') and hasattr(self, 'to_exchange_edge_pdb'):
+            print('exchange_edge_list and to_exchange_edge_pdb are set, will exchange the edges')
+            defective_net.eG = replace_edges_by_callname (exchange_edges_name,defective_net.eG,defective_net.sc_unit_cell_inv,to_exchange_edge_pdb, prefix='R')
+        #if hasattr(self, 'exchange_node_list') and hasattr(self, 'to_exchange_node_pdb'):
+        #    print('exchange_node_list and to_exchange_node_pdb are set, will exchange the nodes')
+        #    defective_net.eG = replace_edges_by_callname (exchange_nodes_name,defective_net.eG,defective_net.sc_unit_cell_inv,to_exchange_node_pdb, prefix='R')
         self.defective_net = defective_net
     
     def set_defect_gro_name(self, defect_gro_name):
@@ -238,6 +249,72 @@ class mof_builder():
         print('writing defective gro file')
 
         self.defective_net.write_node_edge_node_gro(self.defect_gro_name)
+    
+    def write_defective_split_node_gro_again(self,gro_name):
+        if not self.preparation.dummy_node:
+            print('dummy node is not used, splitting node is not possible')
+            return
+        print('splitting node and saving gro again, called after write_defect_gro()')
+        nodes_eG = self.defective_net.nodes_eG
+        edges_eG = self.defective_net.edges_eG
+        terms_eG = self.defective_net.terms_eG
+        node_split_dict = make_dummy_split_node_dict(self.node_pdb)
+        nodes_eGarr = np.vstack(nodes_eG)
+        metals_list,hho_list,ho_list,o_list = rename_node_arr(node_split_dict,nodes_eGarr)
+
+        merged_split_node_edge_term = []
+        line_num = 0
+        res_count = 0
+        print('writing split node gro')
+        for splitted_node in [metals_list,hho_list,ho_list,o_list,edges_eG,terms_eG]:
+            merged_split_node_edge_term,line_num,res_count = merge_metal_list_to_node_array(
+            merged_split_node_edge_term,splitted_node,line_num,res_count)
+        
+        print('metal_res_num: ',len(metals_list)) 
+        print('hho_res_num: ',len(hho_list))
+        print('ho_res_num: ',len(ho_list))
+        print('o_res_num: ',len(o_list))
+        print('edge_res_num: ',len(edges_eG))
+        print('term_res_num: ',len(terms_eG))
+
+
+        save_node_edge_term_gro(merged_split_node_edge_term,gro_name)
+
+        
+
+
+    def write_split_node_gro_again(self,gro_name):
+        if not self.preparation.dummy_node:
+            print('dummy node is not used, splitting node is not possible')
+            return
+            
+        print('splitting node and saving gro again, called after write_gro()')
+        
+        nodes_eG = self.net.nodes_eG
+        edges_eG = self.net.edges_eG
+        terms_eG = self.net.terms_eG
+
+        node_split_dict = make_dummy_split_node_dict(self.node_pdb)
+        nodes_eGarr = np.vstack(nodes_eG)
+        metals_list,hho_list,ho_list,o_list = rename_node_arr(node_split_dict,nodes_eGarr)
+
+        merged_split_node_edge_term = []
+        line_num = 0
+        res_count = 0
+        print('writing split node gro')
+        for splitted_node in [metals_list,hho_list,ho_list,o_list,edges_eG,terms_eG]:
+            merged_split_node_edge_term,line_num,res_count = merge_metal_list_to_node_array(
+            merged_split_node_edge_term,splitted_node,line_num,res_count)
+
+        save_node_edge_term_gro(merged_split_node_edge_term,gro_name)
+
+        print('metal_res_num: ',len(metals_list)) 
+        print('hho_res_num: ',len(hho_list))
+        print('ho_res_num: ',len(ho_list))
+        print('o_res_num: ',len(o_list))
+        print('edge_res_num: ',len(edges_eG))
+        print('term_res_num: ',len(terms_eG))
+
         
     
 
