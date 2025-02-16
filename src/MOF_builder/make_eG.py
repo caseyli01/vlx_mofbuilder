@@ -12,7 +12,7 @@ def make_paired_Xto_x(ec_arr,merged_arr,neighbor_number):
         ec_fpoints = np.vstack([ec_fpoints]*neighbor_number)
     nei_indices,nei_fcpoints = fetch_X_atoms_ind_array(merged_arr[len(ec_arr):],0,'X')
     actual_nei_indices = [i+len(ec_arr) for i in nei_indices]
-    row_ind, col_ind = find_pair_x_edge(ec_fpoints[:,1:4],nei_fcpoints[:,1:4])
+    row_ind, col_ind = find_pair_x_edge(ec_fpoints[:,2:5].astype(float),nei_fcpoints[:,2:5].astype(float))#NOTE: modified to skip atom type
     if len(ec_indices) < neighbor_number:
         row_ind = [i for i in row_ind if i < len(ec_indices)]
     paired_indices = [actual_nei_indices[i] for i in col_ind] + [ec_indices[j] for j in row_ind]
@@ -33,6 +33,7 @@ def superG_to_eG_multitopic(superG):
             eG.add_node(n,f_points=superG.nodes[n]['f_points'],
                         fcoords=superG.nodes[n]['fcoords'],
                         type='V',
+                        name = 'NODE',
                         note='V',
                         index = node_count)
             superG.nodes[n]['index'] = node_count
@@ -52,6 +53,7 @@ def superG_to_eG_multitopic(superG):
                 eG.add_node('EDGE_'+str(edge_count),f_points=merged_edges,
                                     fcoords=superG.nodes[n]['fcoords'],
                                     type = 'Edge',
+                                    name = 'EDGE',
                                     note = 'E',
                                     index = edge_count)
                     
@@ -189,7 +191,7 @@ def addxoo2edge_multitopic(eG,sc_unit_cell):
     EDGE_nodes = [n for n in eG.nodes() if pname(n)=='EDGE']
     for n in EDGE_nodes:
         Xs_edge_indices,Xs_edge_fpoints = fetch_X_atoms_ind_array(eG.nodes[n]['f_points'],0,'X')
-        Xs_edge_ccpoints = np.hstack((Xs_edge_fpoints[:,0:1],np.dot(sc_unit_cell,Xs_edge_fpoints[:,2:5].T).T)) #NOTE: modified to skip atom type
+        Xs_edge_ccpoints = np.hstack((Xs_edge_fpoints[:,0:1],np.dot(sc_unit_cell,Xs_edge_fpoints[:,2:5].astype(float).T).T)) #NOTE: modified to skip atom type
         V_nodes = [i for i in eG.neighbors(n) if pname(i)!='EDGE']
         if len(V_nodes) == 0:
             #unsaturated_linker.append(n)
@@ -200,14 +202,14 @@ def addxoo2edge_multitopic(eG,sc_unit_cell):
         for v in V_nodes:
             #find the connected V node
             Xs_vnode_indices,Xs_vnode_fpoints = fetch_X_atoms_ind_array(eG.nodes[v]['f_points'], 0, 'X')
-            Xs_vnode_ccpoints = np.hstack((Xs_vnode_fpoints[:,0:1],np.dot(sc_unit_cell,Xs_vnode_fpoints[:,2:5].T).T)) #NOTE: modified to skip atom type
+            Xs_vnode_ccpoints = np.hstack((Xs_vnode_fpoints[:,0:1],np.dot(sc_unit_cell,Xs_vnode_fpoints[:,2:5].astype(float).T).T)) #NOTE: modified to skip atom type
             for ind in Xs_vnode_indices:
                 all_Xs_vnodes_ind.append([v,ind])
             all_Xs_vnodes_ccpoints = np.vstack((all_Xs_vnodes_ccpoints,Xs_vnode_ccpoints))
         edgeX_vnodeX_dist_matrix = np.zeros((len(Xs_edge_ccpoints),len(all_Xs_vnodes_ccpoints)))
         for i in range(len(Xs_edge_ccpoints)):
             for j in range(len(all_Xs_vnodes_ccpoints)):
-                edgeX_vnodeX_dist_matrix[i,j] = np.linalg.norm(Xs_edge_ccpoints[i,1:4]-all_Xs_vnodes_ccpoints[j,1:4])
+                edgeX_vnodeX_dist_matrix[i,j] = np.linalg.norm(Xs_edge_ccpoints[i,2:5].astype(float)-all_Xs_vnodes_ccpoints[j,2:5].astype(float))
         for k in range(len(Xs_edge_fpoints)):
             n_j,min_dist,_=find_nearest_neighbor(k,edgeX_vnodeX_dist_matrix)
             if min_dist > 2.5:

@@ -264,15 +264,20 @@ def add_ccoords(G,unit_cell):
 
 def set_DV_V(G):
     for n in G.nodes():
-        if G.degree(n) == max(dict(G.degree()).values()):
-            #G.nodes[n]['type'] = 'V'
-            #check if the moded ccoords is in the unit cell
-            if check_moded_fcoords(G.nodes[n]['fcoords']):
-                G.nodes[n]['type'] = 'V'
-            else:
-                G.nodes[n]['type'] = 'DV'
+        ##if G.degree(n) == max(dict(G.degree()).values()):
+        ##    G.nodes[n]['type'] = 'V'
+        ##    #check if the moded ccoords is in the unit cell
+        if check_moded_fcoords(G.nodes[n]['fcoords']):
+            G.nodes[n]['type'] = 'V'
         else:
             G.nodes[n]['type'] = 'DV'
+        ##elif G.nodes[n]['note'] == 'CV':
+        ##    if check_moded_fcoords(G.nodes[n]['fcoords']):
+        ##        G.nodes[n]['type'] = 'V'
+        ##    else:
+        ##        G.nodes[n]['type'] = 'DV'
+        ##else:
+        ##    G.nodes[n]['type'] = 'DV'
     max_degree = max(dict(G.degree()).values())
     return G,max_degree
 

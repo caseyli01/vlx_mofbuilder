@@ -321,11 +321,12 @@ def fetch_template(metal):
             )
         return template_Cr_D
 
-def order_ccoords(d_ccoords,template_Zr_D):
-    ccords_pair=get_diagonal_pair(d_ccoords)
-    template_pair=get_diagonal_pair(template_Zr_D)
-    min_dist,rot,tran = superimpose(template_pair,ccords_pair)
-    ordered_ccoords=np.dot(template_Zr_D,rot)+tran
+def order_ccoords(d_ccoords,template_Zr_D,target_metal_coords):
+    d_ccoords = d_ccoords - target_metal_coords#centering to origin
+
+     #template_center is already at origin
+    min_dist,rot,tran = superimpose(template_Zr_D,d_ccoords)
+    ordered_ccoords=np.dot(template_Zr_D,rot)+ target_metal_coords
     return ordered_ccoords
 
 
@@ -562,14 +563,12 @@ def add_dummy_atoms_nodepdb(pdbfile,metal,nodeG):
     metal_nodes = [n for n in list(sG.nodes()) if nn(n)==metal]
     count = ind_max+1
     for mn in metal_nodes:
-        neighbor_nodes = list(nx.neighbors(sG,mn))
+        neighbor_nodes = sG.adj[mn].copy()
         Ocheck = all(nn(i)=='O' for i in neighbor_nodes)
         if (len(neighbor_nodes)==2*metal_valence and Ocheck):
             #add dummy
             beginning_cc = sG.nodes[mn]['ccoords']
-
             d_ccoords=[]
-
             for nO in neighbor_nodes:
                 sO = sG.nodes[nO]['ccoords']
                 cnorm_vec = (sO - beginning_cc)/np.linalg.norm(sO - beginning_cc) #1 angstrom
@@ -580,7 +579,7 @@ def add_dummy_atoms_nodepdb(pdbfile,metal,nodeG):
                 #d_fcoords.append(d_fcoord)
                 sG.remove_edge(mn,nO)
             #order ccords based on template order
-            ordered_ccoords=order_ccoords(d_ccoords,template_metal_D)
+            ordered_ccoords=order_ccoords(d_ccoords,template_metal_D,beginning_cc)
 
             for row in range(len(d_ccoords)):
                 sG.add_node('D'+str(count), type='D',  ccoords=ordered_ccoords[row])
@@ -601,18 +600,18 @@ def add_dummy_atoms_nodepdb(pdbfile,metal,nodeG):
 
     #print(nx.number_of_nodes(sG))
 
-    arr = np.empty((sG.number_of_nodes(),4),dtype='O')
-    row=0
-    for n in list(sG.nodes()):
-        arr[row,0] = n
-        s = sG.nodes[n]['ccoords']
-        arr[row,1] = s[0]
-        arr[row,2] = s[1]
-        arr[row,3] = s[2]
-        row+=1
-
+    #arr = np.empty((sG.number_of_nodes(),4),dtype='O')
+    #row=0
+    #for n in list(sG.nodes()):
+    #    arr[row,0] = n
+    #    s = sG.nodes[n]['ccoords']
+    #    arr[row,1] = s[0]
+    #    arr[row,2] = s[1]
+    #    arr[row,3] = s[2]
+    #    row+=1
+#
     sG_subparts=[c for c in sorted(nx.connected_components(sG), key=len, reverse=True)]
-    #print(sG_subparts) #debug 
+    print(sG_subparts) #debug 
 
 
     head = []
@@ -620,7 +619,7 @@ def add_dummy_atoms_nodepdb(pdbfile,metal,nodeG):
     for sub in sG_subparts:
         l = [nn(i)for i in sub]
         if 'X' not in l:
-            head.append(sorted(sub))
+            head.append(sorted(sub)) #include D+metal
         else:
             tail.append(sorted(sub))
             

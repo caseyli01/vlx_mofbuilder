@@ -1,0 +1,46 @@
+
+#======================================================================
+# CRYSTAL DATA
+#----------------------------------------------------------------------
+data_VESTA_phase_1
+
+_chemical_name_common                  'ftw'
+_cell_length_a                         14.142100
+_cell_length_b                         14.142100
+_cell_length_c                         14.142100
+_cell_angle_alpha                      90.000000
+_cell_angle_beta                       90.000000
+_cell_angle_gamma                      90.000000
+_cell_volume                           2828.405951
+_space_group_name_H-M_alt              'P 1'
+_space_group_IT_number                 1
+
+loop_
+_space_group_symop_operation_xyz
+   'x, y, z'
+
+loop_
+   _atom_site_label
+   _atom_site_occupancy
+   _atom_site_fract_x
+   _atom_site_fract_y
+   _atom_site_fract_z
+   _atom_site_adp_type
+   _atom_site_U_iso_or_equiv
+   _atom_site_type_symbol
+   EC1         1.0     0.000000     0.500000     0.500000    Uiso  ? V
+   V2        1.0     0.000000     0.000000     0.000000    Uiso  ? EC
+   EC3         1.0     0.500000     0.000000     0.500000    Uiso  ? V
+   EC4         1.0     0.500000     0.500000     0.000000    Uiso  ? V
+   E1         1.0     0.250000     0.250000     0.000000    Uiso  ? E
+   E2         1.0     0.750000     0.250000     0.000000    Uiso  ? E
+   E3         1.0     0.750000     0.750000     0.000000    Uiso  ? E
+   E4         1.0     0.250000     0.750000     0.000000    Uiso  ? E
+   E5         1.0     0.250000     0.000000     0.250000    Uiso  ? E
+   E6         1.0     0.750000     0.000000     0.250000    Uiso  ? E
+   E7         1.0     0.750000     0.000000     0.750000    Uiso  ? E
+   E8         1.0     0.250000     0.000000     0.750000    Uiso  ? E
+   E9         1.0     0.000000     0.250000     0.250000    Uiso  ? E
+   E10        1.0     0.000000     0.250000     0.750000    Uiso  ? E
+   E11        1.0     0.000000     0.750000     0.750000    Uiso  ? E
+   E12        1.0     0.000000     0.750000     0.250000    Uiso  ? E

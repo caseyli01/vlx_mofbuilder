@@ -2,7 +2,7 @@ import numpy as np
 from scipy.optimize import linear_sum_assignment
 
 def find_pair_x_edge(x_matrix,edge_matrix):
-    dist_matrix = np.zeros((len(x_matrix),len(edge_matrix)))
+    dist_matrix = np.zeros((len(x_matrix), len(edge_matrix)))
     for i in range(len(x_matrix)):
         for j in range(len(edge_matrix)):
             dist_matrix[i,j] = np.linalg.norm(x_matrix[i]-edge_matrix[j])
@@ -18,7 +18,7 @@ def bundle_multiedge(sG):
                 edges.append(sG.edges[n,con_n]['coords'])
             edges = np.vstack(edges,dtype=float)
             #extract the X atom in the CV node
-            cv_xatoms = np.asarray(sG.nodes[n]['x_coords'][:,1:4],dtype=float)
+            cv_xatoms = np.asarray(sG.nodes[n]['x_coords'][:,2:5],dtype=float) #modified for extra column of atom type
             if len(cv_xatoms) < len(edges):
                 #duplicate the cv_xatoms
                 cv_xatoms = np.vstack([cv_xatoms]*len(edges))

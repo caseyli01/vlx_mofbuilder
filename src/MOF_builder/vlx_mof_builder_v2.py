@@ -97,7 +97,7 @@ class mof_builder():
             print('Optimized rotations are loaded from: ', saved_optimized_rotations)
         else:
             print(f'Could not find the saved optimized rotations:  {saved_optimized_rotations} will start the optimization from the beginning')
-            return
+            pass
 
     
     def build(self):
@@ -134,6 +134,47 @@ class mof_builder():
             self.net.main_frag_eG()
             self.net.make_supercell_range_cleaved_eG()
             self.net.add_xoo_to_edge_ditopic()
+            self.net.find_unsaturated_node_eG()
+            if hasattr(self, 'node_termination'):
+                self.net.set_node_terminamtion(self.node_termination)
+            #default termination is methyl in data folder 
+            self.net.set_node_terminamtion(os.path.join(self.preparation.data_path, 'terminations_database/methyl.pdb'))
+            self.net.add_terminations_to_unsaturated_node()
+            self.net.remove_xoo_from_node()
+            #self.net = net
+
+        
+        elif self.linker_topic > 2:
+            print('multitopic mof builder driver is called')
+            start_time = time.time()
+            linker_pdb = self.linker_pdb
+            linker_center_pdb = self.linker_center_pdb
+            template_cif = self.template_cif
+            node_pdb = self.node_pdb
+            supercell = self.supercell
+            self.net = net_optimizer()
+
+            if hasattr(self, 'saved_optimized_rotations'):
+                self.net.load_saved_optimized_rotations(self.saved_optimized_rotations)
+            if hasattr(self, 'optimized_rotations_filename'):
+                self.net.to_save_optimized_rotations(self.optimized_rotations_filename)
+             
+            self.net.analyze_template_multitopic(template_cif)
+            self.net.node_info(node_pdb)
+            self.net.linker_info(linker_pdb)
+            self.net.linker_center_info(linker_center_pdb)
+            self.net.optimize()
+            print('-' * 80)
+            print(' '*15,"Building time cost: %.5f seconds " % (time.time() - start_time))
+            print('-' * 80)
+           
+            self.net.set_supercell(supercell)
+            self.net.place_edge_in_net()
+            self.net.make_supercell_multitopic()
+            self.net.make_eG_from_supereG_multitopic()
+            self.net.main_frag_eG()
+            self.net.make_supercell_range_cleaved_eG()
+            self.net.add_xoo_to_edge_multitopic()
             self.net.find_unsaturated_node_eG()
             if hasattr(self, 'node_termination'):
                 self.net.set_node_terminamtion(self.node_termination)

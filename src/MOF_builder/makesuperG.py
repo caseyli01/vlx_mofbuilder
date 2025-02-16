@@ -165,9 +165,11 @@ def replace_bundle_dvnode_with_vnode(dv_v_pairs,multiedge_bundlings):
     for dv,v in dv_v_pairs:
         for bund in multiedge_bundlings:
             if dv in bund[1]:
-                bund[1][bund[1].index(dv)]=v
+                if pname(bund[1][bund[1].index(dv)]) == pname(dv):
+                    bund[1][bund[1].index(dv)]=v
             if dv in bund[0]:
-                bund[0][bund[0].index(dv)]=v
+                if pname(bund[0][bund[0].index(dv)]) == pname(dv):
+                    bund[0][bund[0].index(dv)]=v
     #update v if no list then add [0,0,0]
     #convert tuple to list
     updated_bundlings = []

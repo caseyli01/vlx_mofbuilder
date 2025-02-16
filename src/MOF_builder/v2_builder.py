@@ -7,7 +7,7 @@ from _node_rotation_matrix_optimizer import optimize_rotations,apply_rotations_t
 from _scale_cif_optimizer import optimize_cell_parameters
 from _place_node_edge import addidx,get_edge_lengths,update_node_ccoords,unit_cell_to_cartesian_matrix,fractional_to_cartesian,cartesian_to_fractional
 from _superimpose import superimpose
-from v2_functions import temp_save_eGterm_gro,fetch_X_atoms_ind_array,find_pair_v_e_c,sort_nodes_by_type_connectivity,find_and_sort_edges_bynodeconnectivity,is_list_A_in_B
+from v2_functions import arr_dimension,fetch_X_atoms_ind_array,find_pair_v_e_c,sort_nodes_by_type_connectivity,find_and_sort_edges_bynodeconnectivity,is_list_A_in_B
 from make_eG import superG_to_eG_ditopic,superG_to_eG_multitopic,remove_node_by_index,addxoo2edge_ditopic,addxoo2edge_multitopic,find_unsaturated_node
 from multiedge_bundling import bundle_multiedge
 from makesuperG import pname,replace_DV_with_corresponding_V,replace_bundle_dvnode_with_vnode,make_super_multiedge_bundlings,check_multiedge_bundlings_insuperG,add_virtual_edge,update_supercell_bundle,update_supercell_edge_fpoints,update_supercell_node_fpoints_loose
@@ -102,7 +102,7 @@ class net_optimizer():
         pass
 
     
-    def analyze_template_multitopic(self,vvnode333,ecnode333,eenode333,unit_cell,cell_info):
+    def analyze_template_multitopic(self,template_cif):
         """
         analyze the template topology of the multitopic linker
 
@@ -117,14 +117,27 @@ class net_optimizer():
         :param cell_info (array):
             cell information of the template
         """
-        self.vvnode333 = vvnode333
-        self.ecnode333 = ecnode333
-        self.eenode333 = eenode333
+        template_cell_info,_,vvnode = extract_type_atoms_fcoords_in_primitive_cell(template_cif, 'V')
+        _,_,eenode = extract_type_atoms_fcoords_in_primitive_cell(template_cif, 'E')
+        _,_,ecnode = extract_type_atoms_fcoords_in_primitive_cell(template_cif, 'EC')
+        unit_cell = extract_unit_cell(template_cell_info)
+
+        vvnode = np.unique(np.array(vvnode,dtype=float),axis=0)
+        eenode = np.unique(np.array(eenode,dtype=float),axis=0)
+        ecnode = np.unique(np.array(ecnode,dtype=float),axis=0)
+        ##loop over super333xxnode and super333yynode to find the pair of x node in unicell which pass through the yynode
+        vvnode333 = make_supercell_3x3x3(vvnode)
+        eenode333 = make_supercell_3x3x3(eenode)
+        ecnode333 = make_supercell_3x3x3(ecnode)
+
         _,_,G = find_pair_v_e_c(vvnode333,ecnode333,eenode333)
         G = add_ccoords(G,unit_cell)
-        G = set_DV_V(G)
+        G,self.node_max_degree = set_DV_V(G)
         self.G = set_DE_E(G)
-        self.cell_info = cell_info
+        self.cell_info = template_cell_info
+        self.vvnode333 = vvnode333
+        self.eenode333 = eenode333
+        self.ecnode333 = ecnode333
     
     def analyze_template_ditopic(self,template_cif):
         """
@@ -219,7 +232,16 @@ class net_optimizer():
         self.linker_atom, self.linker_ccoords, self.linker_x_ccoords = process_node_pdb(linker_pdb,'X')
         self.linker_length = np.linalg.norm(self.linker_x_ccoords[0]-self.linker_x_ccoords[1])
 
-
+    def linker_center_info(self,linker_center_pdb):
+        """
+        get the linker information
+        
+        :param linker_cif (str):
+            cif file of the ditopic linker or branch of multitopic linker    
+        """
+        self.linker_center_pdb = linker_center_pdb
+        self.ec_atom, self.ec_ccoords, self.ec_x_ccoords = process_node_pdb(linker_center_pdb,'X')
+  
     
     def _linker_center(self,linker_center_pdb):
         """
@@ -281,8 +303,8 @@ class net_optimizer():
             print('The number of nodes in the template does not match the maximum degree of the node in the template')
             raise ValueError('The number of nodes in the template does not match the maximum degree of the node in the template')
 
-        if hasattr(self,'ec_xcoords'):
-            ec_xcoords = self.ec_x_ccoords
+        if hasattr(self,'ec_x_ccoords'):
+            ec_x_ccoords = self.ec_x_ccoords
             ecoords = self.ec_ccoords
             
         if not hasattr(self,'opt_method'):
@@ -321,7 +343,7 @@ class net_optimizer():
         #reindex the nodes in the xxxx_positions with the index in the sorted_nodes, like G has 16 nodes[2,5,7], but the new dictionary should be [0,1,2]
         for n in sorted_nodes:
             if 'CV' in n:
-                xxxx_positions_dict[sorted_nodes.index(n)]=addidx(G.nodes[n]['ccoords']+ec_xcoords) 
+                xxxx_positions_dict[sorted_nodes.index(n)]=addidx(G.nodes[n]['ccoords']+ec_x_ccoords) 
             else:
                 xxxx_positions_dict[sorted_nodes.index(n)]=addidx(G.nodes[n]['ccoords']+node_xcoords) 
 
@@ -393,7 +415,7 @@ class net_optimizer():
 
         for n in sorted_nodes:
             if 'CV' in n:
-                scaled_xxxx_positions_dict[sorted_nodes.index(n)]=addidx(sG.nodes[n]['ccoords']+ec_xcoords) 
+                scaled_xxxx_positions_dict[sorted_nodes.index(n)]=addidx(sG.nodes[n]['ccoords']+ec_x_ccoords) 
             else:
                 scaled_xxxx_positions_dict[sorted_nodes.index(n)]=addidx(sG.nodes[n]['ccoords']+node_xcoords) 
 
@@ -516,7 +538,8 @@ class net_optimizer():
         self.prim_multiedge_bundlings = replace_bundle_dvnode_with_vnode(self.dv_v_pairs,self.multiedge_bundlings)
         self.super_multiedge_bundlings = make_super_multiedge_bundlings(self.prim_multiedge_bundlings,self.supercell)
         superG = update_supercell_bundle(superG,self.super_multiedge_bundlings)
-        self.superG = check_multiedge_bundlings_insuperG(self.super_multiedge_bundlings,superG)
+        superG = check_multiedge_bundlings_insuperG(self.super_multiedge_bundlings,superG)
+        self.superG = superG
         return superG
     
     def make_supercell_ditopic(self):
@@ -664,6 +687,8 @@ class net_optimizer():
         print('main fragment of the MOF cell is kept')#,len(self.eG.nodes()),'nodes')
         #print('fragment size list:',[len(c) for c in nx.connected_components(eG)]) #debug
         return self.eG
+    
+  
 
     def make_supercell_range_cleaved_eG(self,buffer=0):
         eG = self.eG
@@ -676,10 +701,17 @@ class net_optimizer():
                 else:
                     new_eG.remove_node(n)
             elif pname(n) == 'EDGE' :
-                if check_supercell_box_range(np.mean(eG.nodes[n]['fcoords'],axis=0),supercell,buffer):
+                if arr_dimension(eG.nodes[n]['fcoords'])==2: #ditopic linker have two points in the fcoords
+                    edge_coords = np.mean(eG.nodes[n]['fcoords'],axis=0)
+                elif arr_dimension(eG.nodes[n]['fcoords'])==1: #multitopic linker have one point in the fcoords from EC
+                    edge_coords = eG.nodes[n]['fcoords']
+
+                if check_supercell_box_range(edge_coords,supercell,buffer):
                     pass
                 else:
                     new_eG.remove_node(n)
+           
+      
         self.eG = new_eG
         return new_eG
 

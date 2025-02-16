@@ -52,6 +52,12 @@ def check_edge_inunitcell(G,e):
         return False
     return True
 
+def arr_dimension(arr):
+    if isinstance(arr[0], list):
+        return 2
+    else:
+        return 1  
+        
 def check_supercell_box_range(point,supercell,buffer):
     #to cleave eG to supercell box
 
