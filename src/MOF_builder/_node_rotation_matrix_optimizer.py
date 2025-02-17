@@ -305,7 +305,7 @@ def objective_function(params, G, static_atom_positions, sorted_nodes,sorted_edg
 
 
 
-def optimize_rotations(num_nodes,G,sorted_nodes,sorted_edges,atom_positions,opt_methods="L-BFGS-B",maxfun=15000):
+def optimize_rotations(num_nodes,G,sorted_nodes,sorted_edges,atom_positions,opt_methods="L-BFGS-B",maxfun=15000,maxiter=5000):
     """
     Optimize rotations for all nodes in the graph.
 
@@ -328,7 +328,7 @@ def optimize_rotations(num_nodes,G,sorted_nodes,sorted_edges,atom_positions,opt_
         initial_rotations,
         args=(G, static_atom_positions, sorted_nodes,sorted_edges),
         method=opt_methods,
-        options={"maxiter": 5000, "disp": True,"maxfun": maxfun},
+        options={"maxiter": maxiter, "disp": True,"maxfun": maxfun},
     )
 
     

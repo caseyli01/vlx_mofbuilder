@@ -1,7 +1,7 @@
 import time 
 import numpy as np
 import os
-from v2_builder import net_optimizer,pname
+from v2_builder import net_optimizer
 from prepare_class import prepare
 from v2_functions import replace_edges_by_callname,extract_node_name_from_gro_resindex,save_node_edge_term_gro,make_dummy_split_node_dict,rename_node_arr,merge_metal_list_to_node_array
 
@@ -113,6 +113,12 @@ class mof_builder():
             node_pdb = self.node_pdb
             supercell = self.supercell
             self.net = net_optimizer()
+            if hasattr(self, 'rotation_optimizer_maxfun'):
+                self.net.set_rotation_optimizer_maxfun(self.rotation_optimizer_maxfun)
+            if hasattr(self, 'rotation_optimizer_maxiter'):
+                self.net.set_rotation_optimizer_maxiter(self.rotation_optimizer_maxiter)
+            if hasattr(self, 'rotation_optimizer_method'):
+                self.net.set_rotation_optimizer_method(self.rotation_optimizer_method)
 
             if hasattr(self, 'saved_optimized_rotations'):
                 self.net.load_saved_optimized_rotations(self.saved_optimized_rotations)
@@ -158,6 +164,13 @@ class mof_builder():
                 self.net.load_saved_optimized_rotations(self.saved_optimized_rotations)
             if hasattr(self, 'optimized_rotations_filename'):
                 self.net.to_save_optimized_rotations(self.optimized_rotations_filename)
+            if hasattr(self, 'rotation_optimizer_maxfun'):
+                self.net.set_rotation_optimizer_maxfun(self.rotation_optimizer_maxfun)
+            if hasattr(self, 'rotation_optimizer_maxiter'):
+                self.net.set_rotation_optimizer_maxiter(self.rotation_optimizer_maxiter)
+            if hasattr(self, 'rotation_optimizer_method'):
+                self.net.set_rotation_optimizer_method(self.rotation_optimizer_method)
+
              
             self.net.analyze_template_multitopic(template_cif)
             self.net.node_info(node_pdb)

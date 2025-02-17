@@ -21,17 +21,8 @@ class net_optimizer():
     """
     net_optimizer is a class to optimize the node and edge structure of the MOF, add terminations to nodes.
 
-    :param vvnode333 (array): 
-        supercell of V nodes in template topology
-    :param ecnode333 (array): 
-        supercell of EC nodes (Center of multitopic linker) in template topology
-    :param eenode333 (array): 
-        supercell of E nodes(ditopic linker or branch of multitopic linker) in template
-    :param unit_cell (array): 
-        unit cell of the template
-    :param cell_info (array): 
-        cell information of the template
-    
+    :param template_cif (str):
+        cif file of the template, including only V and E *(EC)nodes info in primitive cell
     Instance variables:
         - node_cif (str):cif file of the node
         - node_target_type (str):metal atom type of the node
@@ -261,13 +252,19 @@ class net_optimizer():
         """
         self.constant_length = constant_length
     
-    def set_maxfun(self,maxfun):
+    def set_rotation_optimizer_maxfun(self,maxfun):
         """
         set the maximum number of function evaluations for the node rotation optimization
         """
         self.maxfun = maxfun
 
-    def set_opt_method(self,opt_method):
+    def set_rotation_optimizer_maxiter(self,maxiter):
+        """
+        set the maximum number of iterations for the node rotation optimization
+        """
+        self.maxiter = maxiter
+
+    def set_rotation_optimizer_method(self,opt_method):
         """
         set the optimization method for the node rotation optimization
         """
@@ -315,6 +312,9 @@ class net_optimizer():
 
         if not hasattr(self,'maxfun'):
             self.maxfun = 10000
+        
+        if not hasattr(self,'maxiter'):
+            self.maxiter = 10000
   
 
         G = self.G
@@ -323,6 +323,7 @@ class net_optimizer():
         linker_length = self.linker_length
         opt_method = self.opt_method
         maxfun = self.maxfun
+        maxiter = self.maxiter
         constant_length = self.constant_length
         sorted_nodes = sort_nodes_by_type_connectivity(G)
 
@@ -365,7 +366,7 @@ class net_optimizer():
             print('start to optimize the rotations')
             optimized_rotations,static_xxxx_positions = optimize_rotations(num_nodes,G,sorted_nodes,
                                                                                 sorted_edges_of_sortednodeidx, 
-                                                                                xxxx_positions_dict,opt_method,maxfun)
+                                                                                xxxx_positions_dict,opt_method,maxfun,maxiter)
             if hasattr(self,'to_save_optimized_rotations_filename'):
                 np.save(self.to_save_optimized_rotations_filename+'.npy',optimized_rotations)
                 print('optimized rotations are saved to: ', self.to_save_optimized_rotations_filename+'.npy')
