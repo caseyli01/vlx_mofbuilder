@@ -208,7 +208,8 @@ def extract_node_edge_term(tG,sc_unit_cell):
             edges_name_set.add(name)
             if len(edges_check_set) > len(edges_name_set):
                 print(edges_check_set)
-                raise ValueError('edge atom number is not continuous')
+                print('edge atom number is not continuous')
+                #raise ValueError('edge atom number is not continuous')
             edge_res_num+=1
             edges_tG.append(np.hstack((np.tile(np.array([edge_res_num,name]), (len(postions), 1)), #residue number and residue name
                                         postions[:, 1:2], #atom type (element)

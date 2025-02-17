@@ -3,7 +3,7 @@ import time
 import numpy as np
 import networkx as nx
 from _readcif_pdb import process_node,read_cif,read_pdb,process_node_pdb,extract_type_atoms_fcoords_in_primitive_cell
-from _node_rotation_matrix_optimizer import optimize_rotations,apply_rotations_to_atom_positions,apply_rotations_to_xxxx_positions,update_ccoords_by_optimized_cell_params
+from _node_rotation_matrix_optimizer import optimize_rotations_pre,optimize_rotations_after,apply_rotations_to_atom_positions,apply_rotations_to_xxxx_positions,update_ccoords_by_optimized_cell_params
 from _scale_cif_optimizer import optimize_cell_parameters
 from _place_node_edge import addidx,get_edge_lengths,update_node_ccoords,unit_cell_to_cartesian_matrix,fractional_to_cartesian,cartesian_to_fractional
 from _superimpose import superimpose
@@ -311,10 +311,10 @@ class net_optimizer():
             self.constant_length = 1.54
 
         if not hasattr(self,'maxfun'):
-            self.maxfun = 10000
+            self.maxfun = 1000
         
         if not hasattr(self,'maxiter'):
-            self.maxiter = 10000
+            self.maxiter = 1000
   
 
         G = self.G
@@ -364,9 +364,14 @@ class net_optimizer():
         ###3D free rotation
         if not hasattr(self,'saved_optimized_rotations'):
             print('start to optimize the rotations')
-            optimized_rotations,static_xxxx_positions = optimize_rotations(num_nodes,G,sorted_nodes,
+            initial_guess = np.tile(np.eye(3), (num_nodes, 1)).flatten()
+            optimized_rotations_pre,static_xxxx_positions = optimize_rotations_pre(num_nodes,G,sorted_nodes,
                                                                                 sorted_edges_of_sortednodeidx, 
-                                                                                xxxx_positions_dict,opt_method,maxfun,maxiter)
+                                                                                xxxx_positions_dict,initial_guess)
+
+            optimized_rotations,static_xxxx_positions = optimize_rotations_after(num_nodes,G,sorted_nodes,
+                                                                                sorted_edges_of_sortednodeidx, 
+                                                                                xxxx_positions_dict,optimized_rotations_pre)
             if hasattr(self,'to_save_optimized_rotations_filename'):
                 np.save(self.to_save_optimized_rotations_filename+'.npy',optimized_rotations)
                 print('optimized rotations are saved to: ', self.to_save_optimized_rotations_filename+'.npy')

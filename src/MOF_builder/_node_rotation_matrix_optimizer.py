@@ -251,9 +251,62 @@ def compute_rotation_with_pairing(connected_nodes, atom_positions,current_rotati
 
     return optimized_rotation_matrix
 
-def objective_function(params, G, static_atom_positions, sorted_nodes,sorted_edges):
+def objective_function_pre(params, G, static_atom_positions, sorted_nodes,sorted_edges):
     """
-    Objective function to minimize distances between paired atoms along edges.
+    Objective function to minimize distances between paired node to paired node_com along edges.
+
+    Parameters:
+        params (numpy.ndarray): Flattened array of rotation matrices.
+        G (networkx.Graph): Graph structure.
+        atom_positions (dict): Original positions of X atoms for each node.
+
+
+    Returns:
+        float: Total distance metric to minimize.
+    """
+    num_nodes = len(G.nodes())
+    rotation_matrices = params.reshape(num_nodes, 3, 3)
+    total_distance = 0.0
+
+    for (i, j) in sorted_edges:
+        R_i = reorthogonalize_matrix(rotation_matrices[i])
+
+        com_i = G.nodes[sorted_nodes[i]]['ccoords']
+        com_j = G.nodes[sorted_nodes[j]]['ccoords']
+        # Rotate positions around their mass center
+        rotated_i_positions = np.dot(static_atom_positions[i][:,1:] - com_i, R_i.T) + com_i
+
+
+        dist_matrix = np.empty((len(rotated_i_positions), 1))    
+        for idx_i in range(len(rotated_i_positions)):
+                dist = np.linalg.norm(rotated_i_positions[idx_i] - com_j)
+                dist_matrix[idx_i,0] = dist
+                #total_distance += dist ** 2
+        if np.argmin(dist_matrix) > 1:
+            total_distance += 1e4 #penalty for the distance difference
+        else:
+            total_distance += (np.min(dist_matrix) ** 2)
+#
+        for idx_i in range(len(rotated_i_positions)):
+            #second min and min distance difference not max
+            if len(dist_matrix[idx_i, :]) > 1:
+                second_min_dist = np.partition(dist_matrix[idx_i, :], 1)[1]
+            else:
+                second_min_dist = np.partition(dist_matrix[idx_i, :], 0)[0]
+            diff = second_min_dist - np.min(dist_matrix[idx_i, :])
+
+            if diff <4:
+                total_distance += 1e4
+        
+        total_distance+= 1e3/(np.max(dist_matrix) - np.min(dist_matrix) ) #reward for the distance difference
+
+   
+
+    return total_distance
+
+def objective_function_after(params, G, static_atom_positions, sorted_nodes,sorted_edges):
+    """
+    Objective function to minimize distances between paired atoms along edges. just use minimum distance
 
     Parameters:
         params (numpy.ndarray): Flattened array of rotation matrices.
@@ -284,28 +337,42 @@ def objective_function(params, G, static_atom_positions, sorted_nodes,sorted_edg
             for idx_j in range(len(rotated_j_positions)):
                 dist = np.linalg.norm(rotated_i_positions[idx_i] - rotated_j_positions[idx_j])
                 dist_matrix[idx_i, idx_j] = dist
-                total_distance += (dist ** 3)
-        for idx_i in range(len(rotated_i_positions)):
-            diff = max(dist_matrix[idx_i,:]) - min(dist_matrix[idx_i, :])
-            if diff > 1:
-                total_distance += 10000/diff 
-            else:#penalty for the distance difference
-                total_distance += 1e5
-        for idx_j in range(len(rotated_j_positions)):
-            diff = max(dist_matrix[:,idx_j]) - min(dist_matrix[:, idx_j])
-            if diff > 1:
-                total_distance += 10000/diff 
-            else:#penalty for the distance difference
-                total_distance += 1e5
+ 
+        if np.argmin(dist_matrix) > 1:
+            total_distance += 1e4 #penalty for the distance difference
+        else:
+            total_distance += (np.min(dist_matrix) ** 2)
 
+
+
+
+
+        for idx_i in range(len(rotated_i_positions)):
+            #second min and min distance difference not max
+            if len(dist_matrix[idx_i, :]) > 1:
+                second_min_dist = np.partition(dist_matrix[idx_i, :], 1)[1]
+            else:
+                second_min_dist = np.partition(dist_matrix[idx_i, :], 0)[0]
+            diff = second_min_dist - np.min(dist_matrix[idx_i, :])
+            if diff <3:
+                total_distance += 1e4
+        for idx_j in range(len(rotated_j_positions)):
+            #second min and min distance difference not max
+            if len(dist_matrix[:, idx_j]) > 1:
+                second_min_dist = np.partition(dist_matrix[:, idx_j], 1)[1]
+            else:
+                second_min_dist = np.partition(dist_matrix[:, idx_j], 0)[0]
+            diff = second_min_dist - np.min(dist_matrix[:, idx_j])
+
+            if diff <3:
+                total_distance += 1e4
+        
 
     return total_distance
 
 
 
-
-
-def optimize_rotations(num_nodes,G,sorted_nodes,sorted_edges,atom_positions,opt_methods="L-BFGS-B",maxfun=15000,maxiter=5000):
+def optimize_rotations_pre(num_nodes,G,sorted_nodes,sorted_edges,atom_positions,initial_rotations):
     """
     Optimize rotations for all nodes in the graph.
 
@@ -316,7 +383,8 @@ def optimize_rotations(num_nodes,G,sorted_nodes,sorted_edges,atom_positions,opt_
     Returns:
         list: Optimized rotation matrices for all nodes.
     """
-    initial_rotations = np.tile(np.eye(3), (num_nodes, 1)).flatten()
+    print('optimize_rotations_pre')
+    #initial_rotations = np.tile(np.eye(3), (num_nodes, 1)).flatten()
     #get a better initial guess, use random rotation matrix combination
     #initial_rotations  = np.array([reorthogonalize_matrix(np.random.rand(3,3)) for i in range(num_nodes)]).flatten()
     static_atom_positions = atom_positions.copy()
@@ -324,11 +392,55 @@ def optimize_rotations(num_nodes,G,sorted_nodes,sorted_edges,atom_positions,opt_
     #edge_pairings = find_edge_pairings(sorted_edges, atom_positions)
 
     result = minimize(
-        objective_function,
+        objective_function_pre,
         initial_rotations,
         args=(G, static_atom_positions, sorted_nodes,sorted_edges),
-        method=opt_methods,
-        options={"maxiter": maxiter, "disp": True,"maxfun": maxfun},
+        method="L-BFGS-B",
+        options={"maxiter": 5000, "disp": True,"maxfun": 15000},
+    )
+
+    
+
+    #optimized_rotations = result.x.reshape(num_nodes, 3, 3)
+    #optimized_rotations = [reorthogonalize_matrix(R) for R in optimized_rotations]
+    
+    optimized_rotations = result.x
+    #optimized_rotations = [reorthogonalize_matrix(R) for R in optimized_rotations]
+   ## # Print the optimized pairings after optimization
+   ## print("Optimized Pairings (after optimization):")
+   ## for (i, j), pairs in edge_pairings.items():
+   ##     print(f"Node {i} and Node {j}:")
+   ##     for idx_i, idx_j in pairs:
+   ##         print(f"  node{i}_{idx_i} -- node{j}_{idx_j}")
+   ## print()
+
+    return optimized_rotations,static_atom_positions
+
+
+def optimize_rotations_after(num_nodes,G,sorted_nodes,sorted_edges,atom_positions,initial_rotations):
+    """
+    Optimize rotations for all nodes in the graph.
+
+    Parameters:
+        G (networkx.Graph): Graph structure with edges between nodes.
+        atom_positions (dict): Positions of X atoms for each node.
+
+    Returns:
+        list: Optimized rotation matrices for all nodes.
+    """
+    print('optimize_rotations_after')
+    #get a better initial guess, use random rotation matrix combination
+    #initial_rotations  = np.array([reorthogonalize_matrix(np.random.rand(3,3)) for i in range(num_nodes)]).flatten()
+    static_atom_positions = atom_positions.copy()
+    # Precompute edge-specific pairings
+    #edge_pairings = find_edge_pairings(sorted_edges, atom_positions)
+
+    result = minimize(
+        objective_function_after,
+        initial_rotations,
+        args=(G, static_atom_positions, sorted_nodes,sorted_edges),
+        method="L-BFGS-B",
+        options={"maxiter": 10000, "disp": True,"maxfun": 15000},
     )
 
     
