@@ -235,7 +235,7 @@ def lines_of_atoms(subgraph,subgraph_nodes):
 
     return rows
 
-def get_bonds_from_subgraph(subgraph):
+def dummynode_get_bonds_from_subgraph(subgraph):
     bonds =[]
     for e in list(subgraph.edges()):
         atom1 = e[0]
@@ -453,7 +453,7 @@ def add_dummy_atoms_nodecif(ciffile,metal):
         subnodes = subpart_nodes[count_i]
         subgraph = nx.subgraph(sG,subnodes)
         all_lines+=lines_of_atoms(subgraph,sorted(subnodes))
-        all_bonds+=get_bonds_from_subgraph(subgraph)
+        all_bonds+=dummynode_get_bonds_from_subgraph(subgraph)
 
     create_cif(all_lines,all_bonds,os.path.dirname(dummy_ciffile),os.path.basename(dummy_ciffile))
 
@@ -673,7 +673,7 @@ def add_dummy_atoms_nodepdb(pdbfile,metal,nodeG):
         subnodes = subpart_nodes[count_i]
         subgraph = nx.subgraph(sG,subnodes)
         all_lines+=lines_of_atoms(subgraph,sorted(subnodes))
-        all_bonds+=get_bonds_from_subgraph(subgraph)
+        all_bonds+=dummynode_get_bonds_from_subgraph(subgraph)
 
     #create_cif(all_lines,all_bonds,os.path.dirname(dummy_ciffile),os.path.basename(dummy_ciffile)) #if want dummy node cif file
     create_pdb(dummy_pdbfile.removesuffix('.pdb'),all_lines)

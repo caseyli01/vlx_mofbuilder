@@ -193,6 +193,8 @@ def make_super_multiedge_bundlings(prim_multiedge_bundlings,supercell):
 def update_supercell_bundle(superG,super_multiedge_bundlings):
     for ec_node in super_multiedge_bundlings.keys():
         con_nodes = super_multiedge_bundlings[ec_node]
+        #order the con_nodes by th x-x pair of the ecnode X atoms
+        
         prim_ecname = pname(ec_node) + '_'+str(np.array([0.,0.,0.]))
         if ec_node not in superG.nodes():
             trans = lname(ec_node)

@@ -54,12 +54,16 @@ def Xpdb(data,X):
 def convert_to_tuple(array):
     return (tuple(np.round(array[0],3).flatten()), tuple(np.round(array[1],3).flatten()),tuple(np.round(array[2],3).flatten()))
 
+##def is_list_A_in_B(A, B):
+##    # Convert both A and B into sets of tuple representations
+##    A_tuples = set(convert_to_tuple(a) for a in A)
+##    B_tuples = set(convert_to_tuple(b) for b in B)
+##    # Check if all elements in A are in B
+##    return A_tuples.issubset(B_tuples)
+
 def is_list_A_in_B(A, B):
-    # Convert both A and B into sets of tuple representations
-    A_tuples = set(convert_to_tuple(a) for a in A)
-    B_tuples = set(convert_to_tuple(b) for b in B)
-    # Check if all elements in A are in B
-    return A_tuples.issubset(B_tuples)
+    return all([np.allclose(a, b, atol=1e-3) for a, b in zip(A, B)])
+
 
 def add_terminations(term_file,ex_node_cxo_cc):
     tG=nx.Graph()
