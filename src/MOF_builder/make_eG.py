@@ -413,11 +413,14 @@ def addxoo2edge_ditopic(eG, sc_unit_cell):
                 )
         for k in range(len(Xs_edge_fpoints)):
             n_j, min_dist, _ = find_nearest_neighbor(k, edgeX_vnodeX_dist_matrix)
-            # if min_dist > 3.5:
-            #
-            #    unsaturated_linker.append(n)
-            #    print(min_dist,'no xoo for edge node, this linker is a dangling unsaturated linker',n)
-            #    continue
+            if min_dist > 3.5:
+                unsaturated_linker.append(n)
+                print(
+                    min_dist,
+                    "no xoo for edge node, this linker is a dangling unsaturated linker",
+                    n,
+                )
+                continue
             # add the xoo to the edge node
             nearest_vnode = all_Xs_vnodes_ind[n_j][0]
             nearest_X_ind_in_vnode = all_Xs_vnodes_ind[n_j][1]

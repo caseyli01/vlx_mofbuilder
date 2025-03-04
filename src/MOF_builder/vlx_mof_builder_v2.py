@@ -12,6 +12,7 @@ from v2_functions import (
     merge_metal_list_to_node_array,
 )
 import re
+from display import gro_show
 
 
 def nn(s):
@@ -26,19 +27,19 @@ class MofBuilder:
         # load the MOF_topology_dict flie in database folder
         preparation = prepare()
         self.preparation = preparation
+        self.mof_family = None
+        self.node_metal = None
+        self.linker_xyz_file = None
+        self.supercell = (1, 1, 1)
+        self.dummy_node = False
+        pass
 
     def show_available_mof_families(self):
-        # show available mof families and hints for preparation
         self.preparation.list_mof_family()
-        print(
-            "MOF builder is initialized, please prepare the building material by calling the preparation driver"
-        )
-        print("1.preparation.select_mof_family()")
-        print("2.preparation.select_node_metal()")
-        print("3.preparation.use_dummy_node()")
-        print("4.preparation.fetch_node()")
-        print("5.preparation.fetch_linker()")
-        print("***check the preparation status by calling preparation_check()***")
+        # print(
+        #    "MOF builder is initialized, please prepare the building material by calling the preparation driver"
+        # )
+        # print("***check the preparation status by calling preparation_check()***")
 
     def preparation_check(self):
         preparation = self.preparation
@@ -51,17 +52,18 @@ class MofBuilder:
             self.mof_family = preparation.mof_family
             self.template_cif = preparation.selected_template_cif_file
             self.node_pdb = preparation.selected_node_pdb_file
-            self.node_target_type = preparation.node_metal
+            self.node_metal = preparation.node_metal
             self.linker_pdb = preparation.selected_linker_edge_pdb
             self.linker_center_pdb = (
                 preparation.selected_linker_center_pdb
             )  # could be None if ditopic linker
             self.linker_topic = preparation.linker_topic
             self.linker_xyz = preparation.linker_xyz
+            return True
         else:
             print("Error: Could not find the required files")
             print("Please redo the preparation steps")
-            return
+            return False
 
     def set_supercell(self, supercell):
         self.supercell = supercell
@@ -140,9 +142,21 @@ class MofBuilder:
             pass
 
     def build(self):
+        self.preparation.select_mof_family(self.mof_family)
+        self.preparation.select_node_metal(self.node_metal)
+        if hasattr(self, "dummy_node"):
+            self.preparation.use_dummy_node(self.dummy_node)
+        self.preparation.fetch_node()
+        self.preparation.fetch_linker(self.linker_xyz_file)
+        if not self.preparation_check():
+            print("Error: Could not find the required files")
+            print("Please redo the preparation steps")
+            return
+
         # check before building
         if not hasattr(self, "supercell"):
-            self.supercell = [1, 1, 1]
+            self.supercell = (1, 1, 1)
+        self.supercell = list([self.supercell[0], self.supercell[1], self.supercell[2]])
 
         if self.linker_topic == 2:
             print("ditopic mof builder driver is called")
@@ -160,10 +174,8 @@ class MofBuilder:
                 self.net.set_rotation_optimizer_maxiter(self.rotation_optimizer_maxiter)
             if hasattr(self, "rotation_optimizer_method"):
                 self.net.set_rotation_optimizer_method(self.rotation_optimizer_method)
-
             if hasattr(self, "rotation_optimizer_eps"):
                 self.net.set_rotation_optimizer_eps(self.rotation_optimizer_eps)
-
             if hasattr(self, "rotation_optimizer_iprint"):
                 self.net.set_rotation_optimizer_iprint(self.rotation_optimizer_iprint)
             if hasattr(self, "rotation_optimizer_display"):
@@ -280,7 +292,7 @@ class MofBuilder:
     def set_gro_name(self, gro_name):
         self.gro_name = gro_name
 
-    def write_gro(self):
+    def write_gromacs_files(self, display=False):
         if hasattr(self, "saved_eG"):
             if self.supercell == self.saved_supercell:
                 print("saved_eG is found, will write the preserved eG")
@@ -296,16 +308,22 @@ class MofBuilder:
                 + self.linker_xyz.strip(".xyz")
             )
             print("gro_name is not set, will be saved as: ", self.gro_name + ".gro")
+
         print("writing gro file")
         print("nodes:", len(self.net.eG.nodes()), "edges:", len(self.net.eG.edges()))
         self.net.write_node_edge_node_gro(self.gro_name)
+        if display:
+            print("displaying the gromacs file")
+            gro_show(self.gro_name + ".gro")
         # temp_save_eGterm_gro(net.eG,net.sc_unit_cell) #debugging
 
     # functions are under construction
-    def make_defects_missing(self):
+    def make_defects_missing(self, update_node_term=False):
         self.saved_eG = self.net.eG.copy()  # save the original eG before making defects
         self.saved_supercell = self.supercell
+        # herit the original net to defective net
         self.defective_net = self.net
+
         print(
             "saved_eG is saved",
             "nodes: ",
@@ -339,6 +357,7 @@ class MofBuilder:
             if len(neighbors) == 2:  # ditopic linker case
                 dG.remove_edge(neighbors[0], neighbors[1])
             dG.remove_node(edge_name)
+            print("removed node: ", edge_name)
 
         print(
             "defective eG is updated",
@@ -352,6 +371,11 @@ class MofBuilder:
         self.defective_net.main_frag_eG()
         # sort subgraph by connectivity
         self.defective_net.make_supercell_range_cleaved_eG()
+        if update_node_term:
+            if self.linker_topic == 2:
+                self.defective_net.add_xoo_to_edge_ditopic()
+            elif self.linker_topic > 2:
+                self.defective_net.add_xoo_to_edge_multitopic()
         self.defective_net.find_unsaturated_node_eG()
         self.defective_net.add_terminations_to_unsaturated_node()
         self.defective_net.remove_xoo_from_node()
@@ -523,12 +547,13 @@ if __name__ == "__main__":
     mof.preparation.fetch_linker("ndi.xyz")
     mof.preparation_check()
     mof.rotation_optimizer_maxfun = 1000
-    mof.use_saved_optimized_rotations_npy("rota")
+    mof.set_use_saved_optimized_rotations_npy("rota")
+    mof.use_saved_rotations_as_initial_guess(False)
     # save optimized rotations to numpy file for later use
     mof.save_optimized_rotations("rota")
     mof.set_supercell([1, 1, 1])
     mof.build()
-    mof.write_gro()
+    mof.write_gromacs_files()
     mof.set_remove_edge_list([30, 31, 32])
     mof.set_remove_node_list([])
     mof.make_defects_missing()

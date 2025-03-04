@@ -512,12 +512,26 @@ def process_linker_molecule(
                     for ind, value in enumerate(l_list)
                     if value == (max(l_list) - 1)
                 ]
-
                 if len(outer_connected_C_ind) == 1:
                     outer_X = linker_C_l[outer_connected_C_ind[0]]
                     if center_nodes[k] not in [outer_X[0]]:
                         print("find connected X in edge:  ", outer_X[0])
                         Xs_indices += [outer_X[0]]
+
+            if len(Xs_indices) < 2:
+                print("Xs in the center cycle")
+                # the linker is a cycle, but no Xs are found by the dist, then the X in in the center cycle:
+                # the node whose adjacents(nonH) more than 2 are the Xs
+                for n in center_nodes:
+                    adj_nonH_num = 0
+                    if lG.nodes[n]["label"] == "C":
+                        adj_nodes = list(lG.adj[n])
+                        for adj in adj_nodes:
+                            if lG.nodes[adj]["label"] != "H":
+                                adj_nonH_num += 1
+                        if adj_nonH_num > 2:
+                            Xs_indices.append(n)
+
     else:
         raise ValueError(
             "failed to recognize a multitopic linker whose center is not a cycle"
@@ -604,6 +618,7 @@ def process_linker_molecule(
 
     elif linker_topic == 2:  # ditopic
         pairXs = Xs_indices
+        print("pairXs:", pairXs)
         subgraph_center_frag = cleave_outer_frag_subgraph(lG, pairXs, lG.nodes)
         subgraph_center_frag_edges = list(subgraph_center_frag.edges)
         # plot2dedge(lG,coords,subgraph_center_frag_edges,True)

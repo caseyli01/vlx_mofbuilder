@@ -1,5 +1,6 @@
 import numpy as np
 import re
+import os
 import networkx as nx
 from _place_node_edge import fractional_to_cartesian, cartesian_to_fractional
 from _superimpose import superimpose
@@ -383,6 +384,8 @@ def merge_node_edge_term(nodes_tG, edges_tG, terms_tG, node_res_num, edge_res_nu
 
 
 def save_node_edge_term_gro(merged_node_edge_term, gro_name):
+    os.makedirs("output_gros", exist_ok=True)
+    gro_name = os.path.join("output_gros", gro_name)
     with open(str(gro_name) + ".gro", "w") as f:
         head = []
         head.append("eG_NET\n")
