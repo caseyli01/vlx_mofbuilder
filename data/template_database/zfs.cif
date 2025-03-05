@@ -1,0 +1,50 @@
+data_zfs_P4122  hall_number: 368, V_con: 5
+_audit_creation_date              2025-03-05
+_audit_creation_method            'MOFbuilder_1.0'
+_symmetry_space_group_name_H-M    'P1'
+_symmetry_Int_Tables_number       1
+_symmetry_cell_setting            triclinic
+loop_
+_symmetry_equiv_pos_as_xyz
+  x,y,z
+_cell_length_a                    21.4289
+_cell_length_b                    21.4289
+_cell_length_c                    22.6693
+_cell_angle_alpha                 90.0
+_cell_angle_beta                  90.0
+_cell_angle_gamma                 90.0
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+V1    V   0.03801  0.26920  0.21762
+V2    V   0.03801  0.73080  0.28238
+V3    V   0.26920  0.03801  0.53238
+V4    V   0.26920  0.96199  0.96762
+V5    V   0.73080  0.03801  0.46762
+V6    V   0.73080  0.96199  0.03238
+V7    V   0.96199  0.26920  0.78238
+V8    V   0.96199  0.73080  0.71762
+E1    E   0.00000  0.26920  0.00000
+E2    E   0.00000  0.73080  0.50000
+E3    E   0.03801  0.50000  0.25000
+E4    E   0.11559  0.15361  0.65738
+E5    E   0.11559  0.84639  0.84262
+E6    E   0.15361  0.11559  0.09262
+E7    E   0.15361  0.15361  0.37500
+E8    E   0.15361  0.84639  0.12500
+E9    E   0.15361  0.88441  0.40738
+E10   E   0.26920  0.00000  0.75000
+E11   E   0.50000  0.03801  0.50000
+E12   E   0.50000  0.96199  0.00000
+E13   E   0.73080  0.00000  0.25000
+E14   E   0.84639  0.11559  0.90738
+E15   E   0.84639  0.15361  0.62500
+E16   E   0.84639  0.84639  0.87500
+E17   E   0.84639  0.88441  0.59262
+E18   E   0.88441  0.15361  0.34262
+E19   E   0.88441  0.84639  0.15738
+E20   E   0.96199  0.50000  0.75000
+loop_

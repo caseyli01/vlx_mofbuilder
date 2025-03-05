@@ -1,0 +1,46 @@
+data_lib_P4/mmm  hall_number: 400, V_con: 6, EC_con: 6
+_audit_creation_date              2025-03-05
+_audit_creation_method            'MOFbuilder_1.0'
+_symmetry_space_group_name_H-M    'P1'
+_symmetry_Int_Tables_number       1
+_symmetry_cell_setting            triclinic
+loop_
+_symmetry_equiv_pos_as_xyz
+  x,y,z
+_cell_length_a                    27.320600000000002
+_cell_length_b                    27.320600000000002
+_cell_length_c                    9.9999
+_cell_angle_alpha                 90.0
+_cell_angle_beta                  90.0
+_cell_angle_gamma                 90.0
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+V1    V   0.00000  0.50000  0.00000
+V2    V   0.50000  0.00000  0.00000
+EC1    EC   0.18301  0.18301  0.00000
+EC2    EC   0.18301  0.81699  0.00000
+EC3    EC   0.81699  0.18301  0.00000
+EC4    EC   0.81699  0.81699  0.00000
+E1    E   0.00000  0.18301  0.00000
+E2    E   0.00000  0.50000  0.50000
+E3    E   0.00000  0.81699  0.00000
+E4    E   0.09151  0.34151  0.00000
+E5    E   0.09151  0.65849  0.00000
+E6    E   0.18301  0.00000  0.00000
+E7    E   0.18301  0.18301  0.50000
+E8    E   0.18301  0.81699  0.50000
+E9    E   0.34151  0.09151  0.00000
+E10   E   0.34151  0.90849  0.00000
+E11   E   0.50000  0.00000  0.50000
+E12   E   0.65849  0.09151  0.00000
+E13   E   0.65849  0.90849  0.00000
+E14   E   0.81699  0.00000  0.00000
+E15   E   0.81699  0.18301  0.50000
+E16   E   0.81699  0.81699  0.50000
+E17   E   0.90849  0.34151  0.00000
+E18   E   0.90849  0.65849  0.00000
+loop_

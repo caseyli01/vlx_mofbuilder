@@ -1,0 +1,40 @@
+data_bcn_Pnn2  hall_number: 170, V_con: 4, EC_con: 4
+_audit_creation_date              2025-03-05
+_audit_creation_method            'MOFbuilder_1.0'
+_symmetry_space_group_name_H-M    'P1'
+_symmetry_Int_Tables_number       1
+_symmetry_cell_setting            triclinic
+loop_
+_symmetry_equiv_pos_as_xyz
+  x,y,z
+_cell_length_a                    17.248
+_cell_length_b                    19.7489
+_cell_length_c                    27.805300000000003
+_cell_angle_alpha                 90.0
+_cell_angle_beta                  90.0
+_cell_angle_gamma                 90.0
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+V1    V   0.00000  0.00000  0.00000
+V2    V   0.50000  0.50000  0.50000
+EC1    EC   0.25000  0.12817  0.68854
+EC2    EC   0.25000  0.62817  0.18854
+EC3    EC   0.75000  0.37183  0.18854
+EC4    EC   0.75000  0.87183  0.68854
+E1    E   0.00000  0.00000  0.68854
+E2    E   0.00000  0.50000  0.18854
+E3    E   0.12500  0.06408  0.84427
+E4    E   0.12500  0.81408  0.09427
+E5    E   0.37500  0.31408  0.59427
+E6    E   0.37500  0.56408  0.34427
+E7    E   0.50000  0.00000  0.68854
+E8    E   0.50000  0.50000  0.18854
+E9    E   0.62500  0.43592  0.34427
+E10   E   0.62500  0.68592  0.59427
+E11   E   0.87500  0.18592  0.09427
+E12   E   0.87500  0.93592  0.84427
+loop_
