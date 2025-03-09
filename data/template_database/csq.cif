@@ -1,5 +1,5 @@
 data_csq_P6/mmm  hall_number: 485, V_con: 8, EC_con: 4
-_audit_creation_date              2025-03-05
+_audit_creation_date              2025-03-06
 _audit_creation_method            'MOFbuilder_1.0'
 _symmetry_space_group_name_H-M    'P1'
 _symmetry_Int_Tables_number       1
@@ -7,9 +7,9 @@ _symmetry_cell_setting            triclinic
 loop_
 _symmetry_equiv_pos_as_xyz
   x,y,z
-_cell_length_a                    32.661699999999996
-_cell_length_b                    32.661699999999996
-_cell_length_c                    11.5457
+_cell_length_a                    32
+_cell_length_b                    32
+_cell_length_c                    11
 _cell_angle_alpha                 90.0
 _cell_angle_beta                  90.0
 _cell_angle_gamma                 120.0
@@ -19,15 +19,15 @@ _atom_site_type_symbol
 _atom_site_fract_x
 _atom_site_fract_y
 _atom_site_fract_z
-V1    V   0.00000  0.50000  0.50000
-V2    V   0.50000  0.00000  0.50000
-V3    V   0.50000  0.50000  0.50000
-EC1    EC   0.25000  0.50000  0.00000
-EC2    EC   0.25000  0.75000  0.00000
-EC3    EC   0.50000  0.25000  0.00000
-EC4    EC   0.50000  0.75000  0.00000
-EC5    EC   0.75000  0.25000  0.00000
-EC6    EC   0.75000  0.50000  0.00000
+V1    V   0.00000  0.50000  0.00000
+V2    V   0.50000  0.00000  0.00000
+V3    V   0.50000  0.50000  0.00000
+EC1    EC   0.25000  0.50000  0.50000
+EC2    EC   0.25000  0.75000  0.50000
+EC3    EC   0.50000  0.25000  0.50000
+EC4    EC   0.50000  0.75000  0.50000
+EC5    EC   0.75000  0.25000  0.50000
+EC6    EC   0.75000  0.50000  0.50000
 E1    E   0.12500  0.50000  0.25000
 E2    E   0.12500  0.50000  0.75000
 E3    E   0.12500  0.62500  0.25000

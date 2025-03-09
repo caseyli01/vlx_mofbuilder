@@ -1,0 +1,46 @@
+data_wnu_R-3c:H  hall_number: 167, V_con: 7
+_audit_creation_date              2025-03-06
+_audit_creation_method            'MOFbuilder_1.0'
+_symmetry_space_group_name_H-M    'P1'
+_symmetry_Int_Tables_number       1
+_symmetry_cell_setting            triclinic
+loop_
+_symmetry_equiv_pos_as_xyz
+  x,y,z
+_cell_length_a                    75.137
+_cell_length_b                    75.137
+_cell_length_c                    10.0
+_cell_angle_alpha                 90.0
+_cell_angle_beta                  90.0
+_cell_angle_gamma                 120.0
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+V1    V   0.26679  0.19102  0.16666
+V2    V   0.26679  0.30898  0.66666
+V3    V   0.76679  0.69102  0.33334
+V4    V   0.76679  0.80898  0.83334
+E1    E   0.22891  0.22891  0.25000
+E2    E   0.22891  0.27109  0.75000
+E3    E   0.26679  0.13339  0.91666
+E4    E   0.26679  0.19102  0.66666
+E5    E   0.26679  0.30898  0.16666
+E6    E   0.26679  0.36661  0.41666
+E7    E   0.33333  0.22430  0.41667
+E8    E   0.33333  0.22430  0.91667
+E9    E   0.33333  0.27570  0.41667
+E10   E   0.33333  0.27570  0.91667
+E11   E   0.72891  0.72891  0.25000
+E12   E   0.72891  0.77109  0.75000
+E13   E   0.76679  0.63339  0.58334
+E14   E   0.76679  0.69102  0.83334
+E15   E   0.76679  0.80898  0.33334
+E16   E   0.76679  0.86661  0.08334
+E17   E   0.83333  0.72430  0.08333
+E18   E   0.83333  0.72430  0.58333
+E19   E   0.83333  0.77570  0.08333
+E20   E   0.83333  0.77570  0.58333
+loop_

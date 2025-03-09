@@ -5,6 +5,7 @@ from scipy.spatial.distance import pdist, squareform
 from scipy.cluster.hierarchy import linkage, fcluster
 from scipy.spatial import KDTree
 from _readcif_pdb import extract_type_atoms_fcoords_in_primitive_cell
+from makesuperG import pname
 
 
 # use cell_info to generate the matrix for the unit cell to get cartesian coordinates
@@ -325,7 +326,9 @@ def find_pair_v_e_c(vvnode333, ecnode333, eenode333):  # exist center of linker 
                     ),
                 )
                 pair_ve.append(("V" + str(v1_idx), "CV" + str(v2_idx), e))
+
     return pair_ve, len(pair_ve), G
+
 
 # add ccoords to the the nodes in the graph
 def add_ccoords(G, unit_cell):
@@ -341,15 +344,23 @@ def set_DV_V(G):
         ##    #check if the moded ccoords is in the unit cell
         if check_moded_fcoords(G.nodes[n]["fcoords"]):
             G.nodes[n]["type"] = "V"
+            G = nx.relabel_nodes(
+                G, {n: pname(n) + "_" + str(np.array([0.0, 0.0, 0.0]))}
+            )
+
         else:
             G.nodes[n]["type"] = "DV"
-        ##elif G.nodes[n]['note'] == 'CV':
-        ##    if check_moded_fcoords(G.nodes[n]['fcoords']):
-        ##        G.nodes[n]['type'] = 'V'
-        ##    else:
-        ##        G.nodes[n]['type'] = 'DV'
-        ##else:
-        ##    G.nodes[n]['type'] = 'DV'
+            # rename node name to V_diff
+            diff = G.nodes[n]["fcoords"] - np.mod(G.nodes[n]["fcoords"], 1)
+            # find the corresponding V (with type V)node by the moded fcoords
+            for n1 in G.nodes():
+                if np.all(
+                    np.isclose(G.nodes[n1]["fcoords"], np.mod(G.nodes[n]["fcoords"], 1))
+                ):
+                    n1_name = pname(n1)
+            # replace node name
+            G = nx.relabel_nodes(G, {n: n1_name + "_" + str(diff)})
+
     max_degree = max(dict(G.degree()).values())
     return G, max_degree
 

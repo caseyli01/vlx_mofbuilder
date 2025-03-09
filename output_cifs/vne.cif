@@ -1,0 +1,42 @@
+data_vne_P121/c1  hall_number: 89, V_con: 9
+_audit_creation_date              2025-03-06
+_audit_creation_method            'MOFbuilder_1.0'
+_symmetry_space_group_name_H-M    'P1'
+_symmetry_Int_Tables_number       1
+_symmetry_cell_setting            triclinic
+loop_
+_symmetry_equiv_pos_as_xyz
+  x,y,z
+_cell_length_a                    10.0
+_cell_length_b                    19.293400000000002
+_cell_length_c                    17.1037
+_cell_angle_alpha                 90.0
+_cell_angle_beta                  106.8447
+_cell_angle_gamma                 90.0
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+V1    V   0.13765  0.11567  0.72668
+V2    V   0.36235  0.11567  0.22668
+V3    V   0.63765  0.88433  0.77332
+V4    V   0.86235  0.88433  0.27332
+E1    E   0.00000  0.00000  0.00000
+E2    E   0.00000  0.00000  0.50000
+E3    E   0.00000  0.13433  0.25000
+E4    E   0.00000  0.86567  0.75000
+E5    E   0.13765  0.25000  0.47668
+E6    E   0.13765  0.88433  0.77332
+E7    E   0.36235  0.88433  0.27332
+E8    E   0.36235  0.25000  0.97668
+E9    E   0.50000  0.00000  0.00000
+E10   E   0.50000  0.00000  0.50000
+E11   E   0.50000  0.13433  0.75000
+E12   E   0.50000  0.86567  0.25000
+E13   E   0.63765  0.11567  0.72668
+E14   E   0.63765  0.75000  0.02332
+E15   E   0.86235  0.11567  0.22668
+E16   E   0.86235  0.75000  0.52332
+loop_

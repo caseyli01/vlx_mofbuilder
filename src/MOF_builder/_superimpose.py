@@ -1,11 +1,13 @@
 import numpy as np
 from Bio.SVDSuperimposer import SVDSuperimposer
 import itertools
+from numpy.linalg import norm
 
 
 def sort_by_distance(arr):
-    # Calculate distances from the first element to all other elements
-    distances = [(np.linalg.norm(arr[0] - arr[i]), i) for i in range(len(arr))]
+    # Calculate distances from the mass center to all other elements
+    # com = np.mean(arr, axis=0)
+    distances = [(np.linalg.norm(arr[i] - arr[0]), i) for i in range(len(arr))]
     # Sort distances in ascending order
     distances.sort(key=lambda x: x[0])
     return distances
@@ -53,6 +55,76 @@ def superimpose(arr1, arr2, min_rmsd=1e6):
             sup.run()
             rmsd = sup.get_rms()
             if rmsd < min_rmsd:
+                min_rmsd = rmsd
+                best_rot, best_tran = sup.get_rotran()
+
+    return min_rmsd, best_rot, best_tran
+
+
+def _superimpose(arr1, arr2, min_rmsd=1e10):
+    sup = SVDSuperimposer()
+    arr1 = np.asarray(arr1)
+    arr2 = np.asarray(arr2)
+
+    best_rot, best_tran = np.eye(3), np.zeros(3)
+    if len(arr1) == len(arr2):
+        if len(arr1) < 7:
+            for perm in itertools.permutations(arr1):
+                perm = np.asarray(perm)
+                sup.set(arr2, perm)
+                sup.run()
+                rmsd = sup.get_rms()
+                if rmsd < min_rmsd:
+                    min_rmsd = rmsd
+                    best_rot, best_tran = sup.get_rotran()
+            return min_rmsd, best_rot, best_tran
+
+    arr1, arr2 = match_vectors(arr1, arr2, max(6, min(len(arr1), len(arr2))))
+    for perm in itertools.permutations(arr1):
+        perm = np.asarray(perm)
+        sup.set(arr2, perm)
+        sup.run()
+        rmsd = sup.get_rms()
+        if rmsd < min_rmsd:
+            min_rmsd = rmsd
+            best_rot, best_tran = sup.get_rotran()
+
+    return min_rmsd, best_rot, best_tran
+
+
+def superimpose_rotateonly(arr1, arr2, min_rmsd=1e10):
+    sup = SVDSuperimposer()
+    arr1 = np.asarray(arr1)
+    arr2 = np.asarray(arr2)
+
+    best_rot, best_tran = np.eye(3), np.zeros(3)
+    if len(arr1) == len(arr2):
+        if len(arr1) < 7:
+            for perm in itertools.permutations(arr1):
+                perm = np.asarray(perm)
+                sup.set(arr2, perm)
+                sup.run()
+
+                rmsd = sup.get_rms()
+                if rmsd < min_rmsd:
+                    min_rmsd = rmsd
+                    best_rot, best_tran = sup.get_rotran()
+                    if np.allclose(np.dot(sup.get_rotran()[1], np.zeros(3)), 1e-1):
+                        min_rmsd = sup.get_rms()
+                        best_rot, best_tran = sup.get_rotran()
+            return min_rmsd, best_rot, best_tran
+
+    arr1, arr2 = match_vectors(arr1, arr2, min(6, len(arr1), len(arr2)))
+    for perm in itertools.permutations(arr1):
+        perm = np.asarray(perm)
+        sup.set(arr2, perm)
+        sup.run()
+        rmsd = sup.get_rms()
+        rmsd = sup.get_rms()
+        if rmsd < min_rmsd:
+            min_rmsd = rmsd
+            best_rot, best_tran = sup.get_rotran()
+            if np.allclose(np.dot(sup.get_rotran()[1], np.zeros(3)), 1e-1):
                 min_rmsd = rmsd
                 best_rot, best_tran = sup.get_rotran()
 

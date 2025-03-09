@@ -332,7 +332,7 @@ def addxoo2edge_multitopic(eG, sc_unit_cell):
                 k, edgeX_vnodeX_dist_matrix
             )
 
-            if min_dist > 3.5:
+            if min_dist > 4:
                 unsaturated_linker.append(n)
                 print(
                     "no xoo for edge node, this linker is a dangling unsaturated linker",

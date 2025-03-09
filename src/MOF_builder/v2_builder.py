@@ -27,7 +27,7 @@ from _place_node_edge import (
     fractional_to_cartesian,
     cartesian_to_fractional,
 )
-from _superimpose import superimpose
+from _superimpose import superimpose, superimpose_rotateonly
 from v2_functions import (
     arr_dimension,
     fetch_X_atoms_ind_array,
@@ -35,6 +35,7 @@ from v2_functions import (
     sort_nodes_by_type_connectivity,
     find_and_sort_edges_bynodeconnectivity,
     is_list_A_in_B,
+    get_rot_trans_matrix,
 )
 from make_eG import (
     superG_to_eG_ditopic,
@@ -173,12 +174,12 @@ class net_optimizer:
         vvnode = np.unique(np.array(vvnode, dtype=float), axis=0)
         eenode = np.unique(np.array(eenode, dtype=float), axis=0)
         ecnode = np.unique(np.array(ecnode, dtype=float), axis=0)
-        ##loop over super333xxnode and super333yynode to find the pair of x node in unicell which pass through the yynode
+        ##loop over super333xxnode and super333yynode to find the pair of x node in unit cell which pass through the yynode
         vvnode333 = make_supercell_3x3x3(vvnode)
         eenode333 = make_supercell_3x3x3(eenode)
         ecnode333 = make_supercell_3x3x3(ecnode)
 
-        _, _, G = find_pair_v_e_c(vvnode333, ecnode333, eenode333)
+        _, _, G = find_pair_v_e_c(vvnode333, ecnode333, eenode333, unit_cell)
         G = add_ccoords(G, unit_cell)
         G, self.node_max_degree = set_DV_V(G)
         self.G = set_DE_E(G)
@@ -481,42 +482,79 @@ class net_optimizer:
 
         # Optimize rotations
         num_nodes = G.number_of_nodes()
+        pname_list = [pname(n) for n in sorted_nodes]
+        pname_set = set(pname_list)
+        pname_set_dict = {}
+        for node_pname in pname_set:
+            pname_set_dict[node_pname] = {
+                "ind_ofsortednodes": [],
+            }
+        for i, node in enumerate(sorted_nodes):
+            pname_set_dict[pname(node)]["ind_ofsortednodes"].append(i)
+            if len(pname_set_dict[pname(node)]["ind_ofsortednodes"]) == 1:  # first node
+                pname_set_dict[pname(node)]["rot_trans"] = get_rot_trans_matrix(
+                    node, G, sorted_nodes, Xatoms_positions_dict
+                )  # initial guess
+        self.pname_set_dict = pname_set_dict
 
+        for p_name in pname_set_dict:
+            rot, trans = pname_set_dict[p_name]["rot_trans"]
+            for k in pname_set_dict[p_name]["ind_ofsortednodes"]:
+                node = sorted_nodes[k]
+                Xatoms_positions_dict[k][:, 1:] = (
+                    np.dot(
+                        Xatoms_positions_dict[k][:, 1:] - G.nodes[node]["ccoords"], rot
+                    )
+                    + trans
+                    + G.nodes[node]["ccoords"]
+                )
+                node_positions_dict[k] = (
+                    np.dot(node_positions_dict[k] - G.nodes[node]["ccoords"], rot)
+                    + trans
+                    + G.nodes[node]["ccoords"]
+                )
         ###3D free rotation
         if not hasattr(self, "saved_optimized_rotations"):
             print("-" * 80)
             print(" " * 20, "start to optimize the rotations", " " * 20)
             print("-" * 80)
 
-            # initial_guess_rotations = np.tile(np.eye(3), (num_nodes, 1)).flatten()
-            # Identity rotation in quaternion form (w, x, y, z) = (1, 0, 0, 0)
-            # identity_quaternion = np.array([1, 0, 0, 0])
+            ##initial_rots = []
+            ##
+            ##for node in sorted_nodes:
+            ##    rot = get_rotation_matrix(node, G, sorted_nodes, Xatoms_positions_dict)
+            ##    # print(rot)
+            ##    initial_rots.append(rot)
+            ##initial_guess_rotations = np.array(
+            ##    initial_rots
+            ##).flatten()  # Initial guess for rotation matrices
 
-            # Tile it for all nodes
-            # initial_guess_rotations= np.tile(identity_quaternion, (num_nodes, 1)).flatten()
-            initial_guess_rotations = np.array(
-                [np.eye(3) for _ in range(num_nodes)]
-            ).flatten()  # Initial guess for rotation matrices
-            (
-                optimized_rotations_pre,
-                _,
-            ) = optimize_rotations_pre(
-                num_nodes,
-                G,
-                sorted_nodes,
-                sorted_edges_of_sortednodeidx,
-                Xatoms_positions_dict,
-                initial_guess_rotations,
-                opt_method=self.opt_method,
-                maxfun=self.maxfun,
-                maxiter=self.maxiter,
-                disp=self.display,
-                eps=self.eps,
-                iprint=self.iprint,
+            initial_guess_set_rotations = (
+                np.eye(3, 3).reshape(1, 3, 3).repeat(len(pname_set), axis=0)
             )
 
+            ##
+            # (
+            #    optimized_rotations_pre,
+            #    _,
+            # ) = optimize_rotations_pre(
+            #    num_nodes,
+            #    G,
+            #    sorted_nodes,
+            #    sorted_edges_of_sortednodeidx,
+            #    Xatoms_positions_dict,
+            #    initial_guess_set_rotations,
+            #    pname_set_dict,
+            #    opt_method=self.opt_method,
+            #    maxfun=self.maxfun,
+            #    maxiter=self.maxiter,
+            #    disp=self.display,
+            #    eps=self.eps,
+            #    iprint=self.iprint,
+            # )
+
             (
-                optimized_rotations,
+                optimized_set_rotations,
                 _,
             ) = optimize_rotations_after(
                 num_nodes,
@@ -524,7 +562,9 @@ class net_optimizer:
                 sorted_nodes,
                 sorted_edges_of_sortednodeidx,
                 Xatoms_positions_dict,
-                optimized_rotations_pre,
+                initial_guess_set_rotations,
+                # optimized_rotations_pre,
+                pname_set_dict,
                 opt_method=self.opt_method,
                 maxfun=self.maxfun,
                 maxiter=self.maxiter,
@@ -539,7 +579,7 @@ class net_optimizer:
             if hasattr(self, "to_save_optimized_rotations_filename"):
                 np.save(
                     self.to_save_optimized_rotations_filename + ".npy",
-                    optimized_rotations,
+                    optimized_set_rotations,
                 )
                 print(
                     "optimized rotations are saved to: ",
@@ -553,7 +593,10 @@ class net_optimizer:
                     print("-" * 80)
                     print(" " * 20, "start to optimize the rotations", " " * 20)
                     print("-" * 80)
-                    initial_guess_rotations = self.saved_optimized_rotations.flatten()
+
+                    saved_set_rotations = self.saved_optimized_rotations.reshape(
+                        -1, 3, 3
+                    )
                     (
                         optimized_rotations_pre,
                         _,
@@ -563,7 +606,8 @@ class net_optimizer:
                         sorted_nodes,
                         sorted_edges_of_sortednodeidx,
                         Xatoms_positions_dict,
-                        initial_guess_rotations,
+                        saved_set_rotations,
+                        pname_set_dict,
                         opt_method=self.opt_method,
                         maxfun=self.maxfun,
                         maxiter=self.maxiter,
@@ -573,7 +617,7 @@ class net_optimizer:
                     )
 
                     (
-                        optimized_rotations,
+                        optimized_set_rotations,
                         _,
                     ) = optimize_rotations_after(
                         num_nodes,
@@ -582,6 +626,7 @@ class net_optimizer:
                         sorted_edges_of_sortednodeidx,
                         Xatoms_positions_dict,
                         optimized_rotations_pre,
+                        pname_set_dict,
                         opt_method=self.opt_method,
                         maxfun=self.maxfun,
                         maxiter=self.maxiter,
@@ -596,7 +641,7 @@ class net_optimizer:
                     if hasattr(self, "to_save_optimized_rotations_filename"):
                         np.save(
                             self.to_save_optimized_rotations_filename + ".npy",
-                            optimized_rotations,
+                            optimized_set_rotations,
                         )
                         print(
                             "optimized rotations are saved to: ",
@@ -604,18 +649,22 @@ class net_optimizer:
                         )
 
                 else:
-                    optimized_rotations = self.saved_optimized_rotations.reshape(
-                        num_nodes, 3, 3
+                    optimized_set_rotations = self.saved_optimized_rotations.reshape(
+                        -1, 3, 3
                     )
 
             else:
                 print(
                     "use the loaded optimized_rotations from the previous optimization"
                 )
-                optimized_rotations = self.saved_optimized_rotations.reshape(
-                    num_nodes, 3, 3
+                optimized_set_rotations = self.saved_optimized_rotations.reshape(
+                    -1, 3, 3
                 )
+        from _node_rotation_matrix_optimizer import expand_setrots
 
+        optimized_rotations = expand_setrots(
+            pname_set_dict, optimized_set_rotations, sorted_nodes
+        )
         # Apply rotations
         rotated_node_positions = apply_rotations_to_atom_positions(
             optimized_rotations, G, sorted_nodes, node_positions_dict
@@ -702,6 +751,28 @@ class net_optimizer:
                 )
 
         # Apply rotations
+        for p_name in pname_set_dict:
+            rot, trans = pname_set_dict[p_name]["rot_trans"]
+            for k in pname_set_dict[p_name]["ind_ofsortednodes"]:
+                node = sorted_nodes[k]
+                scaled_Xatoms_positions_dict[k][:, 1:] = (
+                    np.dot(
+                        scaled_Xatoms_positions_dict[k][:, 1:]
+                        - sG.nodes[node]["ccoords"],
+                        rot,
+                    )
+                    + trans
+                    + sG.nodes[node]["ccoords"]
+                )
+
+                scaled_node_positions_dict[k] = (
+                    np.dot(
+                        scaled_node_positions_dict[k] - sG.nodes[node]["ccoords"], rot
+                    )
+                    + trans
+                    + sG.nodes[node]["ccoords"]
+                )
+
         scaled_rotated_node_positions = apply_rotations_to_atom_positions(
             optimized_rotations, sG, sorted_nodes, scaled_node_positions_dict
         )
@@ -730,6 +801,8 @@ class net_optimizer:
         self.sG_node = sG
         self.nodes_atom = nodes_atoms
         self.rotated_node_positions = rotated_node_positions
+        self.Xatoms_positions_dict = Xatoms_positions_dict
+        self.node_positions_dict = node_positions_dict
         # save_xyz("scale_optimized_nodesstructure.xyz", scaled_rotated_node_positions)
 
     def place_edge_in_net(self):
@@ -782,7 +855,7 @@ class net_optimizer:
                 rot = rot_record[indices[0]]
                 # rot = reorthogonalize_matrix(rot)
             else:
-                _, rot, _ = superimpose(extended_linker_xx_vec, xx_vector)
+                _, rot, _ = superimpose_rotateonly(extended_linker_xx_vec, xx_vector)
                 # rot = reorthogonalize_matrix(rot)
                 norm_xx_vector_record.append(norm_xx_vector)
                 # the rot may be opposite, so we need to check the angle between the two vectors
@@ -859,12 +932,13 @@ class net_optimizer:
         """
         sG = self.sG
         self.multiedge_bundlings = bundle_multiedge(sG)
-        self.dv_v_pairs, sG = replace_DV_with_corresponding_V(sG)
+        # self.dv_v_pairs, sG = replace_DV_with_corresponding_V(sG) #debug
         superG = update_supercell_node_fpoints_loose(sG, self.supercell)
         superG = update_supercell_edge_fpoints(sG, superG, self.supercell)
-        self.prim_multiedge_bundlings = replace_bundle_dvnode_with_vnode(
-            self.dv_v_pairs, self.multiedge_bundlings
-        )
+        # self.prim_multiedge_bundlings = replace_bundle_dvnode_with_vnode(  #debug
+        #    self.dv_v_pairs, self.multiedge_bundlings
+        # )
+        self.prim_multiedge_bundlings = self.multiedge_bundlings
         self.super_multiedge_bundlings = make_super_multiedge_bundlings(
             self.prim_multiedge_bundlings, self.supercell
         )
@@ -881,7 +955,7 @@ class net_optimizer:
         """
 
         sG = self.sG
-        self.dv_v_pairs, sG = replace_DV_with_corresponding_V(sG)
+        # self.dv_v_pairs, sG = replace_DV_with_corresponding_V(sG)
         superG = update_supercell_node_fpoints_loose(sG, self.supercell)
         superG = update_supercell_edge_fpoints(sG, superG, self.supercell)
         self.superG = superG

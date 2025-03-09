@@ -292,7 +292,7 @@ class MofBuilder:
     def set_gro_name(self, gro_name):
         self.gro_name = gro_name
 
-    def write_gromacs_files(self, display=False):
+    def write_gromacs_files(self):
         if hasattr(self, "saved_eG"):
             if self.supercell == self.saved_supercell:
                 print("saved_eG is found, will write the preserved eG")
@@ -312,10 +312,19 @@ class MofBuilder:
         print("writing gro file")
         print("nodes:", len(self.net.eG.nodes()), "edges:", len(self.net.eG.edges()))
         self.net.write_node_edge_node_gro(self.gro_name)
-        if display:
-            print("displaying the gromacs file")
-            gro_show(self.gro_name + ".gro")
+
         # temp_save_eGterm_gro(net.eG,net.sc_unit_cell) #debugging
+
+    def show(self, width=800, height=600, res_indices=False, res_names=False):
+        gro_file_path = os.path.join("output_gros", self.gro_name)
+        print("showing the gromacs file", gro_file_path)
+        gro_show(
+            gro_file_path + ".gro",
+            w=width,
+            h=height,
+            res_id=res_indices,
+            res_name=res_names,
+        )
 
     # functions are under construction
     def make_defects_missing(self, update_node_term=False):

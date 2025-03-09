@@ -41,6 +41,6 @@ def bundle_multiedge(sG):
                 #    cv_xatoms = np.vstack([cv_xatoms] * len(edges))
                 ##_, order = find_pair_x_edge(cv_xatoms, edges)
                 ##con_n_order = [list(sG.neighbors(n))[i] for i in order]
-                multiedge_bundlings.append((n, list(sG.neighbors(n))))
+            multiedge_bundlings.append((n, list(sG.neighbors(n))))
             # make dist matrix of each x to each edge and then use hugerian algorithm to find the pair of x and edge
     return multiedge_bundlings

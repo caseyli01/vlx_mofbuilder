@@ -1,8 +1,8 @@
-def gro_show(gro_file, width=800, height=600, res_indices=True, res_names=True):
+def gro_show(gro_file, w=800, h=600, res_id=True, res_name=True):
     try:
         import py3Dmol
 
-        viewer = py3Dmol.view(width=width, height=height)
+        viewer = py3Dmol.view(width=w, height=h)
         with open(gro_file, "r") as f:
             lines = f.readlines()
 
@@ -11,7 +11,7 @@ def gro_show(gro_file, width=800, height=600, res_indices=True, res_names=True):
 
         viewer.setViewStyle({"style": "outline", "width": 0.05})
         viewer.setStyle({"stick": {}, "sphere": {"scale": 0.20}})
-        if res_indices or res_names:
+        if res_id or res_name:
             for i in range(2, len(lines) - 1):
                 if lines[i].strip() == "":
                     continue
@@ -29,9 +29,9 @@ def gro_show(gro_file, width=800, height=600, res_indices=True, res_names=True):
                 value_z = float(lines[i][36:44]) * 10  # z
 
                 text = ""
-                if res_names:
+                if res_name:
                     text += str(value_resname)
-                if res_indices:
+                if res_id:
                     text += str(value_resnumber)
 
                 viewer.addLabel(
@@ -45,7 +45,7 @@ def gro_show(gro_file, width=800, height=600, res_indices=True, res_names=True):
                         "alignment": "center",
                         "fontColor": "white",
                         "font": "Arial",
-                        "fontSize": 12,
+                        "fontSize": 5,
                         "backgroundColor": "black",
                         "backgroundOpacity": 0.5,
                     },
