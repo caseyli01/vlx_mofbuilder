@@ -36,6 +36,7 @@ from v2_functions import (
     find_and_sort_edges_bynodeconnectivity,
     is_list_A_in_B,
     get_rot_trans_matrix,
+    update_matched_nodes,
 )
 from make_eG import (
     superG_to_eG_ditopic,
@@ -44,6 +45,7 @@ from make_eG import (
     addxoo2edge_ditopic,
     addxoo2edge_multitopic,
     find_unsaturated_node,
+    find_unsaturated_linker,
 )
 from multiedge_bundling import bundle_multiedge
 from makesuperG import (
@@ -597,24 +599,24 @@ class net_optimizer:
                     saved_set_rotations = self.saved_optimized_rotations.reshape(
                         -1, 3, 3
                     )
-                    (
-                        optimized_rotations_pre,
-                        _,
-                    ) = optimize_rotations_pre(
-                        num_nodes,
-                        G,
-                        sorted_nodes,
-                        sorted_edges_of_sortednodeidx,
-                        Xatoms_positions_dict,
-                        saved_set_rotations,
-                        pname_set_dict,
-                        opt_method=self.opt_method,
-                        maxfun=self.maxfun,
-                        maxiter=self.maxiter,
-                        disp=self.display,
-                        eps=self.eps,
-                        iprint=self.iprint,
-                    )
+                    # (
+                    #    optimized_rotations_pre,
+                    #    _,
+                    # ) = optimize_rotations_pre(
+                    #    num_nodes,
+                    #    G,
+                    #    sorted_nodes,
+                    #    sorted_edges_of_sortednodeidx,
+                    #    Xatoms_positions_dict,
+                    #    saved_set_rotations,
+                    #    pname_set_dict,
+                    #    opt_method=self.opt_method,
+                    #    maxfun=self.maxfun,
+                    #    maxiter=self.maxiter,
+                    #    disp=self.display,
+                    #    eps=self.eps,
+                    #    iprint=self.iprint,
+                    # )
 
                     (
                         optimized_set_rotations,
@@ -625,7 +627,7 @@ class net_optimizer:
                         sorted_nodes,
                         sorted_edges_of_sortednodeidx,
                         Xatoms_positions_dict,
-                        optimized_rotations_pre,
+                        saved_set_rotations,
                         pname_set_dict,
                         opt_method=self.opt_method,
                         maxfun=self.maxfun,
@@ -1052,16 +1054,21 @@ class net_optimizer:
         # print('fragment size list:',[len(c) for c in nx.connected_components(eG)]) #debug
         return self.eG
 
-    def make_supercell_range_cleaved_eG(self, buffer=0):
+    def make_supercell_range_cleaved_eG(self, buffer_plus=0, buffer_minus=0):
         eG = self.eG
         supercell = self.supercell
         new_eG = eG.copy()
+        removed_edges = []
+        removed_nodes = []
         for n in eG.nodes():
             if pname(n) != "EDGE":
-                if check_supercell_box_range(eG.nodes[n]["fcoords"], supercell, buffer):
+                if check_supercell_box_range(
+                    eG.nodes[n]["fcoords"], supercell, buffer_plus, buffer_minus
+                ):
                     pass
                 else:
                     new_eG.remove_node(n)
+                    removed_nodes.append(n)
             elif pname(n) == "EDGE":
                 if (
                     arr_dimension(eG.nodes[n]["fcoords"]) == 2
@@ -1072,13 +1079,22 @@ class net_optimizer:
                 ):  # multitopic linker have one point in the fcoords from EC
                     edge_coords = eG.nodes[n]["fcoords"]
 
-                if check_supercell_box_range(edge_coords, supercell, buffer):
+                if check_supercell_box_range(
+                    edge_coords, supercell, buffer_plus, buffer_minus
+                ):
                     pass
                 else:
                     new_eG.remove_node(n)
+                    removed_edges.append(n)
+
+        self.matched_vnode_xind = update_matched_nodes(
+            removed_nodes,
+            removed_edges,
+            self.matched_vnode_xind,
+        )
 
         self.eG = new_eG
-        return new_eG
+        return new_eG, removed_edges, removed_nodes
 
     def set_node_topic(self, node_topic):
         """
@@ -1098,6 +1114,14 @@ class net_optimizer:
         unsaturated_node = find_unsaturated_node(eG, node_topic)
         self.unsaturated_node = unsaturated_node
         return unsaturated_node
+
+    def find_unsaturated_linker_eG(self, linker_topics):
+        """
+        use the eG to find the unsaturated linkers, whose degree is less than linker topic
+        """
+        unsaturated_linker = find_unsaturated_linker(self.eG, linker_topics)
+        self.unsaturated_linker = unsaturated_linker
+        return unsaturated_linker
 
     def set_node_terminamtion(self, term_file):
         """

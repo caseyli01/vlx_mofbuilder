@@ -7,7 +7,7 @@ def gro_show(gro_file, w=800, h=600, res_id=True, res_name=True):
             lines = f.readlines()
 
         viewer.addModel("".join(lines), "gro")
-        viewer.setStyle({"stick": {}})
+        #viewer.setStyle({"stick": {}})
 
         viewer.setViewStyle({"style": "outline", "width": 0.05})
         viewer.setStyle({"stick": {}, "sphere": {"scale": 0.20}})

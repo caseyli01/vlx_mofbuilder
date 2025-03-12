@@ -141,6 +141,12 @@ class MofBuilder:
             )
             pass
 
+    def set_supercell_cleaved_buffer_plus(self, buffer_plus_ratio):
+        self.supercell_cleaved_buffer_plus = buffer_plus_ratio
+
+    def set_supercell_cleaved_buffer_minus(self, buffer_minus_ratio):
+        self.supercell_cleaved_buffer_minus = buffer_minus_ratio
+
     def build(self):
         self.preparation.select_mof_family(self.mof_family)
         self.preparation.select_node_metal(self.node_metal)
@@ -200,15 +206,29 @@ class MofBuilder:
                 "Building time cost: %.5f seconds " % (time.time() - start_time),
             )
             print("-" * 80)
+            if hasattr(self, "supercell_cleaved_buffer_plus"):
+                cleaved_buffer_plus = self.supercell_cleaved_buffer_plus
+            else:
+                cleaved_buffer_plus = 0.0
+            if hasattr(self, "supercell_cleaved_buffer_minus"):
+                cleaved_buffer_minus = self.supercell_cleaved_buffer_minus
+            else:
+                cleaved_buffer_minus = 0.0
 
             self.net.set_supercell(supercell)
             self.net.place_edge_in_net()
             self.net.make_supercell_ditopic()
             self.net.make_eG_from_supereG_ditopic()
             self.net.main_frag_eG()
-            self.net.make_supercell_range_cleaved_eG()
+            self.archive_eG = self.net.eG.copy()
             self.net.add_xoo_to_edge_ditopic()
+
+            self.net.make_supercell_range_cleaved_eG(
+                buffer_plus=cleaved_buffer_plus, buffer_minus=cleaved_buffer_minus
+            )
             self.net.find_unsaturated_node_eG()
+            # self.net.add_xoo_to_edge_ditopic()
+
             if hasattr(self, "node_termination"):
                 self.net.set_node_terminamtion(self.node_termination)
             # default termination is methyl in data folder
@@ -217,6 +237,8 @@ class MofBuilder:
                     self.preparation.data_path, "terminations_database/methyl.pdb"
                 )
             )
+            ##TODO:
+            # update  self.net.unsaturated_node  and self.net.matched_vnode_xind
             self.net.add_terminations_to_unsaturated_node()
             self.net.remove_xoo_from_node()
             # self.net = net
@@ -268,14 +290,24 @@ class MofBuilder:
                 "Building time cost: %.5f seconds " % (time.time() - start_time),
             )
             print("-" * 80)
+            if hasattr(self, "supercell_cleaved_buffer_plus"):
+                cleaved_buffer_plus = self.supercell_cleaved_buffer_plus
+            else:
+                cleaved_buffer_plus = 0.0
+            if hasattr(self, "supercell_cleaved_buffer_minus"):
+                cleaved_buffer_minus = self.supercell_cleaved_buffer_minus
+            else:
+                cleaved_buffer_minus = 0.0
 
             self.net.set_supercell(supercell)
             self.net.place_edge_in_net()
             self.net.make_supercell_multitopic()
             self.net.make_eG_from_supereG_multitopic()
             self.net.main_frag_eG()
-            self.net.make_supercell_range_cleaved_eG()
             self.net.add_xoo_to_edge_multitopic()
+            self.net.make_supercell_range_cleaved_eG(
+                buffer_plus=cleaved_buffer_plus, buffer_minus=cleaved_buffer_minus
+            )
 
             self.net.find_unsaturated_node_eG()
             if hasattr(self, "node_termination"):
@@ -327,8 +359,12 @@ class MofBuilder:
         )
 
     # functions are under construction
-    def make_defects_missing(self, update_node_term=False):
+    def make_defects_missing(
+        self, update_node_term=False, clean_unsaturated_linkers=False
+    ):
         self.saved_eG = self.net.eG.copy()  # save the original eG before making defects
+        self.saved_eG_unsaturated_node = self.net.unsaturated_node
+        self.saved_eG_matched_vnode_xind = self.net.matched_vnode_xind
         self.saved_supercell = self.supercell
         # herit the original net to defective net
         self.defective_net = self.net
@@ -341,7 +377,7 @@ class MofBuilder:
             len(self.saved_eG.edges),
         )
 
-        dG = self.net.eG.copy()
+        dG = self.archive_eG.copy()
         remove_node_list = []
         remove_edge_list = []
         if hasattr(self, "remove_node_list"):
@@ -358,6 +394,10 @@ class MofBuilder:
         to_remove_edges_name = extract_node_name_from_gro_resindex(
             remove_edge_list, self.net.edges_eG
         )
+        if clean_unsaturated_linkers:
+            to_remove_edges_name = self.net.find_unsaturated_linker_eG(
+                self.linker_topic
+            )
 
         for node_name in to_remove_nodes_name:
             dG.remove_node(node_name)
@@ -375,17 +415,33 @@ class MofBuilder:
             "edges: ",
             len(dG.edges),
         )
+        if hasattr(self, "supercell_cleaved_buffer_plus"):
+            cleaved_buffer_plus = self.supercell_cleaved_buffer_plus
+        else:
+            cleaved_buffer_plus = 0.0
+        if hasattr(self, "supercell_cleaved_buffer_minus"):
+            cleaved_buffer_minus = self.supercell_cleaved_buffer_minus
+        else:
+            cleaved_buffer_minus = 0.0
 
         self.defective_net.eG = dG
         self.defective_net.main_frag_eG()
         # sort subgraph by connectivity
-        self.defective_net.make_supercell_range_cleaved_eG()
+
+        if self.linker_topic == 2:
+            self.defective_net.add_xoo_to_edge_ditopic()
+        elif self.linker_topic > 2:
+            self.defective_net.add_xoo_to_edge_multitopic()
+
+        self.defective_net.make_supercell_range_cleaved_eG(
+            buffer_plus=cleaved_buffer_plus, buffer_minus=cleaved_buffer_minus
+        )
+
         if update_node_term:
-            if self.linker_topic == 2:
-                self.defective_net.add_xoo_to_edge_ditopic()
-            elif self.linker_topic > 2:
-                self.defective_net.add_xoo_to_edge_multitopic()
-        self.defective_net.find_unsaturated_node_eG()
+            self.defective_net.find_unsaturated_node_eG()
+        else:
+            self.defective_net.unsaturated_node = self.saved_eG_unsaturated_node
+            self.defective_net.matched_vnode_xind = self.saved_eG_matched_vnode_xind
         self.defective_net.add_terminations_to_unsaturated_node()
         self.defective_net.remove_xoo_from_node()
 
@@ -440,7 +496,7 @@ class MofBuilder:
     def set_defect_gro_name(self, defect_gro_name):
         self.defect_gro_name = defect_gro_name
 
-    def write_defect_gro(self):
+    def write_defective_model_gromacs_file(self):
         # if not hasattr(self, 'defective_net'):
         #    print('defective_net is not set')
         #    print('make_defects_missing() or make_defects_exchange() should be called before write_defect_gro(), or you can write with write_gro()')
@@ -460,6 +516,19 @@ class MofBuilder:
         print("writing defective gro file")
 
         self.defective_net.write_node_edge_node_gro(self.defect_gro_name)
+
+    def show_defective_model(
+        self, width=800, height=600, res_indices=False, res_names=False
+    ):
+        gro_file_path = os.path.join("output_gros", self.defect_gro_name)
+        print("showing the gromacs file", gro_file_path)
+        gro_show(
+            gro_file_path + ".gro",
+            w=width,
+            h=height,
+            res_id=res_indices,
+            res_name=res_names,
+        )
 
     def write_defective_split_node_gro_again(self, gro_name):
         if not self.preparation.dummy_node:
@@ -566,4 +635,4 @@ if __name__ == "__main__":
     mof.set_remove_edge_list([30, 31, 32])
     mof.set_remove_node_list([])
     mof.make_defects_missing()
-    mof.write_defect_gro()
+    mof.write_defective_model_gromacs_file()

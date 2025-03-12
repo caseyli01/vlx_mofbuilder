@@ -61,37 +61,6 @@ def superimpose(arr1, arr2, min_rmsd=1e6):
     return min_rmsd, best_rot, best_tran
 
 
-def _superimpose(arr1, arr2, min_rmsd=1e10):
-    sup = SVDSuperimposer()
-    arr1 = np.asarray(arr1)
-    arr2 = np.asarray(arr2)
-
-    best_rot, best_tran = np.eye(3), np.zeros(3)
-    if len(arr1) == len(arr2):
-        if len(arr1) < 7:
-            for perm in itertools.permutations(arr1):
-                perm = np.asarray(perm)
-                sup.set(arr2, perm)
-                sup.run()
-                rmsd = sup.get_rms()
-                if rmsd < min_rmsd:
-                    min_rmsd = rmsd
-                    best_rot, best_tran = sup.get_rotran()
-            return min_rmsd, best_rot, best_tran
-
-    arr1, arr2 = match_vectors(arr1, arr2, max(6, min(len(arr1), len(arr2))))
-    for perm in itertools.permutations(arr1):
-        perm = np.asarray(perm)
-        sup.set(arr2, perm)
-        sup.run()
-        rmsd = sup.get_rms()
-        if rmsd < min_rmsd:
-            min_rmsd = rmsd
-            best_rot, best_tran = sup.get_rotran()
-
-    return min_rmsd, best_rot, best_tran
-
-
 def superimpose_rotateonly(arr1, arr2, min_rmsd=1e10):
     sup = SVDSuperimposer()
     arr1 = np.asarray(arr1)

@@ -398,7 +398,7 @@ def addxoo2edge_ditopic(eG, sc_unit_cell):
                 )
             )  # NOTE: modified to skip atom type
             for ind in Xs_vnode_indices:
-                all_Xs_vnodes_ind.append([v, ind])
+                all_Xs_vnodes_ind.append([v, ind, n])
             all_Xs_vnodes_ccpoints = np.vstack(
                 (all_Xs_vnodes_ccpoints, Xs_vnode_ccpoints)
             )
@@ -413,7 +413,7 @@ def addxoo2edge_ditopic(eG, sc_unit_cell):
                 )
         for k in range(len(Xs_edge_fpoints)):
             n_j, min_dist, _ = find_nearest_neighbor(k, edgeX_vnodeX_dist_matrix)
-            if min_dist > 3.5:
+            if min_dist > 4:
                 unsaturated_linker.append(n)
                 print(
                     min_dist,
@@ -450,3 +450,12 @@ def find_unsaturated_node(eG, node_topics):
             if len(real_neighbor) < node_topics:
                 unsaturated_node.append(n)
     return unsaturated_node
+
+
+def find_unsaturated_linker(eG, linker_topics):
+    # find unsaturated linker in eG
+    unsaturated_linker = []
+    for n in eG.nodes():
+        if pname(n) == "EDGE" and len(list(eG.neighbors(n))) < linker_topics:
+            unsaturated_linker.append(n)
+    return unsaturated_linker

@@ -106,18 +106,18 @@ def arr_dimension(arr):
         return 1
 
 
-def check_supercell_box_range(point, supercell, buffer):
+def check_supercell_box_range(point, supercell, buffer_plus, buffer_minus):
     # to cleave eG to supercell box
 
-    supercell_x = supercell[0] + buffer
-    supercell_y = supercell[1] + buffer
-    supercell_z = supercell[2] + buffer
+    supercell_x = supercell[0] + buffer_plus
+    supercell_y = supercell[1] + buffer_plus
+    supercell_z = supercell[2] + buffer_plus
     if (
-        point[0] >= 0
+        point[0] >= 0 + buffer_minus
         and point[0] <= supercell_x
-        and point[1] >= 0
+        and point[1] >= 0 + buffer_minus
         and point[1] <= supercell_y
-        and point[2] >= 0
+        and point[2] >= 0 + buffer_minus
         and point[2] <= supercell_z
     ):
         return True
@@ -187,7 +187,7 @@ def make_unsaturated_vnode_xoo_dict(
 
     # process matched_vnode_xind make it to a dictionary
     matched_vnode_xind_dict = {}
-    for [k, v] in matched_vnode_xind:
+    for [k, v, e] in matched_vnode_xind:
         if k in matched_vnode_xind_dict.keys():
             matched_vnode_xind_dict[k].append(v)
         else:
@@ -242,6 +242,24 @@ def make_unsaturated_vnode_xoo_dict(
     )
 
 
+def update_matched_nodes(removed_nodes, removed_edges, matched_vnode_xind):
+    # if linked edge is removed and the connected node is not removed, then remove this line from matched_vnode_xind
+    # add remove the middle xind of the node to matched_vnode_xind_dict[node] list
+    to_remove_row = []
+
+    for i in range(len(matched_vnode_xind)):
+        node, xind, edge = matched_vnode_xind[i]
+        if edge in removed_edges and node not in removed_nodes:
+            to_remove_row.append(i)
+        elif node in removed_nodes:
+            to_remove_row.append(i)
+    # remove the rows
+    matched_vnode_xind = [
+        i for j, i in enumerate(matched_vnode_xind) if j not in to_remove_row
+    ]
+    return matched_vnode_xind
+
+
 # functions for write
 # write gro file
 def extract_node_edge_term(tG, sc_unit_cell):
@@ -281,27 +299,31 @@ def extract_node_edge_term(tG, sc_unit_cell):
                     )
                 )
             )  # node name in eG is added to the last column
-            for term_ind_key, c_positions in tG.nodes[n]["term_c_points"].items():
-                terms_check_set.add(len(c_positions))
-                name = "T" + tG.nodes[n]["name"]
-                terms_name_set.add(name)
-                if len(terms_check_set) > len(terms_name_set):
-                    raise ValueError("term index is not continuous")
+            if "term_c_points" in tG.nodes[n]:
+                for term_ind_key, c_positions in tG.nodes[n]["term_c_points"].items():
+                    terms_check_set.add(len(c_positions))
+                    name = "T" + tG.nodes[n]["name"]
+                    terms_name_set.add(name)
+                    if len(terms_check_set) > len(terms_name_set):
+                        raise ValueError("term index is not continuous")
 
-                term_res_num += 1
-                terms_tG.append(
-                    np.hstack(
-                        (
-                            np.tile(
-                                np.array([term_res_num, name]), (len(c_positions), 1)
-                            ),  # residue number and residue name
-                            c_positions[:, 1:2],  # atom type (element)
-                            c_positions[:, 2:5],  # Cartesian coordinates
-                            c_positions[:, 0:1],  # atom name
-                            np.tile(np.array([term_ind_key]), (len(c_positions), 1)),
+                    term_res_num += 1
+                    terms_tG.append(
+                        np.hstack(
+                            (
+                                np.tile(
+                                    np.array([term_res_num, name]),
+                                    (len(c_positions), 1),
+                                ),  # residue number and residue name
+                                c_positions[:, 1:2],  # atom type (element)
+                                c_positions[:, 2:5],  # Cartesian coordinates
+                                c_positions[:, 0:1],  # atom name
+                                np.tile(
+                                    np.array([term_ind_key]), (len(c_positions), 1)
+                                ),
+                            )
                         )
-                    )
-                )  # term name in eG is added to the last column
+                    )  # term name in eG is added to the last column
 
         elif pname(n) == "EDGE":
             postions = tG.nodes[n]["f_points"]
