@@ -36,7 +36,7 @@ from v2_functions import (
     find_and_sort_edges_bynodeconnectivity,
     is_list_A_in_B,
     get_rot_trans_matrix,
-    update_matched_nodes,
+    update_matched_nodes_xind,
 )
 from make_eG import (
     superG_to_eG_ditopic,
@@ -1055,9 +1055,9 @@ class net_optimizer:
         return self.eG
 
     def make_supercell_range_cleaved_eG(self, buffer_plus=0, buffer_minus=0):
-        eG = self.eG
         supercell = self.supercell
-        new_eG = eG.copy()
+        new_eG = self.eG.copy()
+        eG = self.eG
         removed_edges = []
         removed_nodes = []
         for n in eG.nodes():
@@ -1087,10 +1087,11 @@ class net_optimizer:
                     new_eG.remove_node(n)
                     removed_edges.append(n)
 
-        self.matched_vnode_xind = update_matched_nodes(
+        matched_vnode_xind = self.matched_vnode_xind
+        self.matched_vnode_xind = update_matched_nodes_xind(
             removed_nodes,
             removed_edges,
-            self.matched_vnode_xind,
+            matched_vnode_xind,
         )
 
         self.eG = new_eG
@@ -1115,13 +1116,12 @@ class net_optimizer:
         self.unsaturated_node = unsaturated_node
         return unsaturated_node
 
-    def find_unsaturated_linker_eG(self, linker_topics):
+    def find_unsaturated_linker_eG(eG, linker_topics):
         """
         use the eG to find the unsaturated linkers, whose degree is less than linker topic
         """
-        unsaturated_linker = find_unsaturated_linker(self.eG, linker_topics)
-        self.unsaturated_linker = unsaturated_linker
-        return unsaturated_linker
+        new_unsaturated_linker = find_unsaturated_linker(eG, linker_topics)
+        return new_unsaturated_linker
 
     def set_node_terminamtion(self, term_file):
         """
@@ -1155,7 +1155,7 @@ class net_optimizer:
         use the node terminations to add terminations to the unsaturated nodes
 
         """
-        unsaturated_node = self.unsaturated_node
+        unsaturated_node = [n for n in self.unsaturated_node if n in self.eG.nodes()]
         xoo_dict = self.xoo_dict
         matched_vnode_xind = self.matched_vnode_xind
         eG = self.eG

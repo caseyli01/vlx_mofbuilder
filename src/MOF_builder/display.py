@@ -7,7 +7,7 @@ def gro_show(gro_file, w=800, h=600, res_id=True, res_name=True):
             lines = f.readlines()
 
         viewer.addModel("".join(lines), "gro")
-        #viewer.setStyle({"stick": {}})
+        # viewer.setStyle({"stick": {}})
 
         viewer.setViewStyle({"style": "outline", "width": 0.05})
         viewer.setStyle({"stick": {}, "sphere": {"scale": 0.20}})
@@ -45,7 +45,7 @@ def gro_show(gro_file, w=800, h=600, res_id=True, res_name=True):
                         "alignment": "center",
                         "fontColor": "white",
                         "font": "Arial",
-                        "fontSize": 5,
+                        "fontSize": 12,
                         "backgroundColor": "black",
                         "backgroundOpacity": 0.5,
                     },

@@ -294,10 +294,10 @@ def addxoo2edge_multitopic(eG, sc_unit_cell):
         V_nodes = [i for i in eG.neighbors(n) if pname(i) != "EDGE"]
         if len(V_nodes) == 0:
             # unsaturated_linker.append(n)
-            print(
-                "no V node connected to this edge node, this linker is a isolated linker, will be ignored",
-                n,
-            )
+            # print(
+            #    "no V node connected to this edge node, this linker is a isolated linker, will be ignored",
+            #    n,
+            # ) # debug
             continue
         all_Xs_vnodes_ind = []
         all_Xs_vnodes_ccpoints = np.zeros((0, 5))
@@ -313,7 +313,7 @@ def addxoo2edge_multitopic(eG, sc_unit_cell):
                 )
             )  # NOTE: modified to skip atom type
             for ind in Xs_vnode_indices:
-                all_Xs_vnodes_ind.append([v, ind])
+                all_Xs_vnodes_ind.append([v, ind, n])
             all_Xs_vnodes_ccpoints = np.vstack(
                 (all_Xs_vnodes_ccpoints, Xs_vnode_ccpoints)
             )
@@ -334,10 +334,10 @@ def addxoo2edge_multitopic(eG, sc_unit_cell):
 
             if min_dist > 4:
                 unsaturated_linker.append(n)
-                print(
-                    "no xoo for edge node, this linker is a dangling unsaturated linker",
-                    n,
-                )
+                # print(
+                #    "no xoo for edge node, this linker is a dangling unsaturated linker",
+                #    n,
+                # ) # debug
                 continue
             # add the xoo to the edge node
 
@@ -415,11 +415,11 @@ def addxoo2edge_ditopic(eG, sc_unit_cell):
             n_j, min_dist, _ = find_nearest_neighbor(k, edgeX_vnodeX_dist_matrix)
             if min_dist > 4:
                 unsaturated_linker.append(n)
-                print(
-                    min_dist,
-                    "no xoo for edge node, this linker is a dangling unsaturated linker",
-                    n,
-                )
+                # print(
+                #   min_dist,
+                #   "no xoo for edge node, this linker is a dangling unsaturated linker",
+                #   n,
+                # ) # debug
                 continue
             # add the xoo to the edge node
             nearest_vnode = all_Xs_vnodes_ind[n_j][0]

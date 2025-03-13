@@ -242,22 +242,28 @@ def make_unsaturated_vnode_xoo_dict(
     )
 
 
-def update_matched_nodes(removed_nodes, removed_edges, matched_vnode_xind):
+def update_matched_nodes_xind(
+    removed_nodes_list, removed_edges_list, matched_vnode_xind
+):
     # if linked edge is removed and the connected node is not removed, then remove this line from matched_vnode_xind
     # add remove the middle xind of the node to matched_vnode_xind_dict[node] list
     to_remove_row = []
 
     for i in range(len(matched_vnode_xind)):
         node, xind, edge = matched_vnode_xind[i]
-        if edge in removed_edges and node not in removed_nodes:
+        if edge in removed_edges_list and node not in removed_nodes_list:
+            # print("remove edge", edge, matched_vnode_xind[i], "from matched_vnode_xind")
             to_remove_row.append(i)
-        elif node in removed_nodes:
+        elif node in removed_nodes_list:
             to_remove_row.append(i)
+            # print("remove node", node, matched_vnode_xind[i], "from matched_vnode_xind")
+
     # remove the rows
-    matched_vnode_xind = [
+
+    update_matched_vnode_xind = [
         i for j, i in enumerate(matched_vnode_xind) if j not in to_remove_row
     ]
-    return matched_vnode_xind
+    return update_matched_vnode_xind
 
 
 # functions for write
@@ -700,3 +706,12 @@ def get_rot_trans_matrix(node, G, sorted_nodes, Xatoms_positions_dict):
     vecsB, _ = recenter_and_norm_vectors(v2, extra_mass_center=node_center)
     _, rot, tran = superimpose_rotateonly(vecsA, vecsB)
     return rot, tran
+
+
+def find_unsaturated_linker(eG, linker_topics):
+    # find unsaturated linker in eG
+    unsaturated_linker = []
+    for n in eG.nodes():
+        if pname(n) == "EDGE" and len(list(eG.neighbors(n))) < linker_topics:
+            unsaturated_linker.append(n)
+    return unsaturated_linker

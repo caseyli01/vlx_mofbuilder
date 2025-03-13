@@ -10,6 +10,8 @@ from v2_functions import (
     make_dummy_split_node_dict,
     rename_node_arr,
     merge_metal_list_to_node_array,
+    update_matched_nodes_xind,
+    find_unsaturated_linker,
 )
 import re
 from display import gro_show
@@ -103,10 +105,10 @@ class MofBuilder:
         self.vitual_edge = True
 
     def set_remove_node_list(self, remove_node_list):
-        self.remove_node_list = remove_node_list
+        self.remove_nodes = remove_node_list
 
     def set_remove_edge_list(self, remove_edge_list):
-        self.remove_edge_list = remove_edge_list
+        self.remove_linkers = remove_edge_list
 
     def save_optimized_rotations(self, filename):
         self.optimized_rotations_filename = filename
@@ -304,6 +306,7 @@ class MofBuilder:
             self.net.make_supercell_multitopic()
             self.net.make_eG_from_supereG_multitopic()
             self.net.main_frag_eG()
+            self.archive_eG = self.net.eG.copy()
             self.net.add_xoo_to_edge_multitopic()
             self.net.make_supercell_range_cleaved_eG(
                 buffer_plus=cleaved_buffer_plus, buffer_minus=cleaved_buffer_minus
@@ -365,6 +368,9 @@ class MofBuilder:
         self.saved_eG = self.net.eG.copy()  # save the original eG before making defects
         self.saved_eG_unsaturated_node = self.net.unsaturated_node
         self.saved_eG_matched_vnode_xind = self.net.matched_vnode_xind
+        self.saved_eG_unsaturated_linker = find_unsaturated_linker(
+            self.net.eG, self.linker_topic
+        )
         self.saved_supercell = self.supercell
         # herit the original net to defective net
         self.defective_net = self.net
@@ -377,13 +383,13 @@ class MofBuilder:
             len(self.saved_eG.edges),
         )
 
-        dG = self.archive_eG.copy()
+        self.defective_net.eG = self.archive_eG.copy()
         remove_node_list = []
         remove_edge_list = []
-        if hasattr(self, "remove_node_list"):
-            remove_node_list = self.remove_node_list
-        if hasattr(self, "remove_edge_list"):
-            remove_edge_list = self.remove_edge_list
+        if hasattr(self, "remove_nodes"):
+            remove_node_list = self.remove_nodes
+        if hasattr(self, "remove_linkers"):
+            remove_edge_list = self.remove_linkers
             remove_edge_list = [
                 str(int(i) - len(self.net.nodes_eG)) for i in remove_edge_list
             ]  # TODO: check if it is correct
@@ -394,27 +400,7 @@ class MofBuilder:
         to_remove_edges_name = extract_node_name_from_gro_resindex(
             remove_edge_list, self.net.edges_eG
         )
-        if clean_unsaturated_linkers:
-            to_remove_edges_name = self.net.find_unsaturated_linker_eG(
-                self.linker_topic
-            )
 
-        for node_name in to_remove_nodes_name:
-            dG.remove_node(node_name)
-        for edge_name in to_remove_edges_name:
-            neighbors = list(dG.neighbors(edge_name))
-            if len(neighbors) == 2:  # ditopic linker case
-                dG.remove_edge(neighbors[0], neighbors[1])
-            dG.remove_node(edge_name)
-            print("removed node: ", edge_name)
-
-        print(
-            "defective eG is updated",
-            "nodes: ",
-            len(dG.nodes),
-            "edges: ",
-            len(dG.edges),
-        )
         if hasattr(self, "supercell_cleaved_buffer_plus"):
             cleaved_buffer_plus = self.supercell_cleaved_buffer_plus
         else:
@@ -424,15 +410,37 @@ class MofBuilder:
         else:
             cleaved_buffer_minus = 0.0
 
-        self.defective_net.eG = dG
-        self.defective_net.main_frag_eG()
-        # sort subgraph by connectivity
-
         if self.linker_topic == 2:
             self.defective_net.add_xoo_to_edge_ditopic()
         elif self.linker_topic > 2:
             self.defective_net.add_xoo_to_edge_multitopic()
 
+        if clean_unsaturated_linkers:
+            to_remove_edges_name.update(self.saved_eG_unsaturated_linker)
+
+        for node_name in to_remove_nodes_name:
+            self.defective_net.eG.remove_node(node_name)
+        for edge_name in to_remove_edges_name:
+            neighbors = list(self.defective_net.eG.neighbors(edge_name))
+            if len(neighbors) == 2:  # ditopic linker case
+                self.defective_net.eG.remove_edge(neighbors[0], neighbors[1])
+            self.defective_net.eG.remove_node(edge_name)
+        self.defective_net.main_frag_eG()
+        # update the matched_vnode_xind
+        self.defective_net.matched_vnode_xind = update_matched_nodes_xind(
+            to_remove_nodes_name,
+            to_remove_edges_name,
+            self.defective_net.matched_vnode_xind,
+        )
+        # sort subgraph by connectivity
+
+        print(
+            "defective eG is updated",
+            "nodes: ",
+            len(self.defective_net.eG.nodes),
+            "edges: ",
+            len(self.defective_net.eG.edges),
+        )
         self.defective_net.make_supercell_range_cleaved_eG(
             buffer_plus=cleaved_buffer_plus, buffer_minus=cleaved_buffer_minus
         )
@@ -442,6 +450,7 @@ class MofBuilder:
         else:
             self.defective_net.unsaturated_node = self.saved_eG_unsaturated_node
             self.defective_net.matched_vnode_xind = self.saved_eG_matched_vnode_xind
+
         self.defective_net.add_terminations_to_unsaturated_node()
         self.defective_net.remove_xoo_from_node()
 
@@ -614,25 +623,3 @@ class MofBuilder:
         print("o_res_num: ", len(o_list))
         print("edge_res_num: ", len(edges_eG))
         print("term_res_num: ", len(terms_eG))
-
-
-if __name__ == "__main__":
-    mof = MofBuilder()
-    mof.preparation.select_mof_family("UiO-67")
-    mof.preparation.select_node_metal("Zr")
-    mof.preparation.use_dummy_node(True)
-    mof.preparation.fetch_node()
-    mof.preparation.fetch_linker("ndi.xyz")
-    mof.preparation_check()
-    mof.rotation_optimizer_maxfun = 1000
-    mof.set_use_saved_optimized_rotations_npy("rota")
-    mof.use_saved_rotations_as_initial_guess(False)
-    # save optimized rotations to numpy file for later use
-    mof.save_optimized_rotations("rota")
-    mof.set_supercell([1, 1, 1])
-    mof.build()
-    mof.write_gromacs_files()
-    mof.set_remove_edge_list([30, 31, 32])
-    mof.set_remove_node_list([])
-    mof.make_defects_missing()
-    mof.write_defective_model_gromacs_file()
