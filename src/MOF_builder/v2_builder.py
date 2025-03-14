@@ -503,9 +503,11 @@ class net_optimizer:
             rot, trans = pname_set_dict[p_name]["rot_trans"]
             for k in pname_set_dict[p_name]["ind_ofsortednodes"]:
                 node = sorted_nodes[k]
+
                 Xatoms_positions_dict[k][:, 1:] = (
                     np.dot(
-                        Xatoms_positions_dict[k][:, 1:] - G.nodes[node]["ccoords"], rot
+                        Xatoms_positions_dict[k][:, 1:] - G.nodes[node]["ccoords"],
+                        rot,
                     )
                     + trans
                     + G.nodes[node]["ccoords"]

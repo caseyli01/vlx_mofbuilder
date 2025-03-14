@@ -27,14 +27,13 @@ class MofBuilder:
         # call preparation driver
         # find database path which should be decided later
         # load the MOF_topology_dict flie in database folder
-        preparation = prepare()
-        self.preparation = preparation
+        self.preparation = prepare()
         self.mof_family = None
         self.node_metal = None
         self.linker_xyz_file = None
         self.supercell = (1, 1, 1)
         self.dummy_node = False
-        pass
+        
 
     def show_available_mof_families(self):
         self.preparation.list_mof_family()
@@ -324,10 +323,9 @@ class MofBuilder:
             self.net.add_terminations_to_unsaturated_node()
             self.net.remove_xoo_from_node()
 
-    def set_gro_name(self, gro_name):
-        self.gro_name = gro_name
 
-    def write_gromacs_files(self):
+
+    def write_gromacs_files(self,gro_name=None):
         if hasattr(self, "saved_eG"):
             if self.supercell == self.saved_supercell:
                 print("saved_eG is found, will write the preserved eG")
@@ -335,7 +333,9 @@ class MofBuilder:
                 self.net.write_node_edge_node_gro(self.gro_name)
                 return
 
-        if not hasattr(self, "gro_name"):
+        if gro_name is not None:
+            self.gro_name = gro_name
+        else:
             self.gro_name = (
                 "mof_"
                 + str(self.mof_family.split(".")[0])

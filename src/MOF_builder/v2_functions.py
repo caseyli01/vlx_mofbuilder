@@ -424,7 +424,7 @@ def save_node_edge_term_gro(merged_node_edge_term, gro_name):
         head.append(str(len(merged_node_edge_term)) + "\n")
         f.writelines(head)
         f.writelines(merged_node_edge_term)
-        tail = ["10 10 10 \n"]
+        tail = ["20 20 20 \n"]
         f.writelines(tail)
 
 
