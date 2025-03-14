@@ -33,7 +33,6 @@ class MofBuilder:
         self.linker_xyz_file = None
         self.supercell = (1, 1, 1)
         self.dummy_node = False
-        
 
     def show_available_mof_families(self):
         self.preparation.list_mof_family()
@@ -323,9 +322,7 @@ class MofBuilder:
             self.net.add_terminations_to_unsaturated_node()
             self.net.remove_xoo_from_node()
 
-
-
-    def write_gromacs_files(self,gro_name=None):
+    def write_gromacs_files(self, gro_name=None):
         if hasattr(self, "saved_eG"):
             if self.supercell == self.saved_supercell:
                 print("saved_eG is found, will write the preserved eG")
@@ -394,10 +391,10 @@ class MofBuilder:
                 str(int(i) - len(self.net.nodes_eG)) for i in remove_edge_list
             ]  # TODO: check if it is correct
 
-        to_remove_nodes_name = extract_node_name_from_gro_resindex(
+        self.to_remove_nodes_name = extract_node_name_from_gro_resindex(
             remove_node_list, self.net.nodes_eG
         )
-        to_remove_edges_name = extract_node_name_from_gro_resindex(
+        self.to_remove_edges_name = extract_node_name_from_gro_resindex(
             remove_edge_list, self.net.edges_eG
         )
 
@@ -416,20 +413,20 @@ class MofBuilder:
             self.defective_net.add_xoo_to_edge_multitopic()
 
         if clean_unsaturated_linkers:
-            to_remove_edges_name.update(self.saved_eG_unsaturated_linker)
+            self.to_remove_edges_name.update(self.saved_eG_unsaturated_linker)
 
-        for node_name in to_remove_nodes_name:
+        for node_name in self.to_remove_nodes_name:
             self.defective_net.eG.remove_node(node_name)
-        for edge_name in to_remove_edges_name:
+        for edge_name in self.to_remove_edges_name:
             neighbors = list(self.defective_net.eG.neighbors(edge_name))
             if len(neighbors) == 2:  # ditopic linker case
                 self.defective_net.eG.remove_edge(neighbors[0], neighbors[1])
             self.defective_net.eG.remove_node(edge_name)
-        self.defective_net.main_frag_eG()
+        # self.defective_net.main_frag_eG()
         # update the matched_vnode_xind
         self.defective_net.matched_vnode_xind = update_matched_nodes_xind(
-            to_remove_nodes_name,
-            to_remove_edges_name,
+            self.to_remove_nodes_name,
+            self.to_remove_edges_name,
             self.defective_net.matched_vnode_xind,
         )
         # sort subgraph by connectivity
