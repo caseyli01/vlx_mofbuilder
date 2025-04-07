@@ -1,0 +1,119 @@
+####################################################################### 
+# 
+# This file contains crystal structure data downloaded from the 
+# Cambridge Structural Database (CSD) hosted by the Cambridge 
+# Crystallographic Data Centre (CCDC).
+# 
+# Full information about CCDC data access policies and citation 
+# guidelines are available at http://www.ccdc.cam.ac.uk/access/V1 
+# 
+# Audit and citation data items may have been added by the CCDC. 
+# Please retain this information to preserve the provenance of 
+# this file and to allow appropriate attribution of the data. 
+# 
+#######################################################################
+
+data_IRMOF-74-II
+_audit_block_doi                 10.5517/ccx7srn
+_database_code_depnum_ccdc_archive 'CCDC 841642'
+loop_
+_citation_id
+_citation_doi
+_citation_year
+1 10.1126/science.1220131 2012
+_audit_update_record             
+;
+2011-08-25 deposited with the CCDC.	2025-03-19 downloaded from the CCDC.
+;
+_audit_creation_date             2012-01-27
+_audit_creation_method           'Materials Studio'
+_symmetry_space_group_name_H-M   R-3
+_symmetry_Int_Tables_number      148
+_symmetry_cell_setting           trigonal
+loop_
+_symmetry_equiv_pos_as_xyz
+x,y,z
+-y,x-y,z
+-x+y,-x,z
+-x,-y,-z
+y,-x+y,-z
+x-y,x,-z
+x+2/3,y+1/3,z+1/3
+-y+2/3,x-y+1/3,z+1/3
+-x+y+2/3,-x+1/3,z+1/3
+-x+2/3,-y+1/3,-z+1/3
+y+2/3,-x+y+1/3,-z+1/3
+x-y+2/3,x+1/3,-z+1/3
+x+1/3,y+2/3,z+2/3
+-y+1/3,x-y+2/3,z+2/3
+-x+y+1/3,-x+2/3,z+2/3
+-x+1/3,-y+2/3,-z+2/3
+y+1/3,-x+y+2/3,-z+2/3
+x-y+1/3,x+2/3,-z+2/3
+_cell_length_a                   36.2552
+_cell_length_b                   36.2552
+_cell_length_c                   6.8482
+_cell_angle_alpha                90.0000
+_cell_angle_beta                 90.0000
+_cell_angle_gamma                120.0000
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+_atom_site_U_iso_or_equiv
+_atom_site_adp_type
+_atom_site_occupancy
+C1 C 0.62456 0.61692 0.43105 0.05000 Uiso 1.00
+C2 C 0.59127 0.58512 1.29750 0.05000 Uiso 1.00
+C3 C 0.58850 0.59271 1.09468 0.05000 Uiso 1.00
+Mg4 Mg 0.66286 0.64077 0.81906 0.05000 Uiso 1.00
+O5 O 0.62420 0.60674 0.61251 0.05000 Uiso 1.00
+O6 O 0.65302 0.65292 0.36927 0.05000 Uiso 1.00
+O7 O 0.61540 0.63163 0.99907 0.05000 Uiso 1.00
+O8 O 0.66979 0.59446 0.89875 0.05000 Uiso 0.75
+C9 C 0.32995 0.21843 -0.31430 0.05000 Uiso 1.00
+E10 E 0.33869 0.18714 0.60873 0.05000 Uiso 1.00
+C11 C 0.35274 0.19326 0.41295 0.05000 Uiso 1.00
+C12 C 0.35432 0.22598 0.29829 0.05000 Uiso 1.00
+H13 H 0.32050 0.21738 -0.16436 0.00000 Uiso 1.00
+H14 H 0.36524 0.22872 0.14795 0.00000 Uiso 1.00
+H15 H 0.36298 0.17313 0.34284 0.00000 Uiso 1.00
+O16 O 0.41054 0.29645 0.68112 0.07000 Uiso 0.98
+O17 O 0.26668 0.39840 0.11424 0.07000 Uiso 0.98
+O18 O 0.42805 0.32712 0.12055 0.07000 Uiso 0.66
+O19 O 0.44862 0.40604 0.35020 0.07000 Uiso 0.98
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_distance
+_geom_bond_site_symmetry_2
+_ccdc_geom_bond_type
+C1 C2 1.494 1_554 S
+C1 O5 1.295 . A
+C1 O6 1.265 . A
+C2 C1 1.494 1_556 S
+C2 C3 1.429 . A
+C2 C12 1.578 17_556 A
+C3 O7 1.412 . S
+C3 C9 1.556 17 A
+Mg4 O5 1.939 . S
+Mg4 O7 2.005 . S
+Mg4 O8 1.898 . S
+Mg4 O6 1.703 14_655 S
+Mg4 O6 1.586 9_565 S
+Mg4 O7 1.648 14_654 S
+O6 Mg4 1.703 9_564 S
+O6 Mg4 1.586 14_654 S
+O7 Mg4 1.648 9_565 S
+C9 C10 1.423 1_554 A
+C9 H13 1.077 . S
+C9 C3 1.556 18_545 A
+C10 C9 1.423 1_556 A
+C10 C11 1.412 . A
+C10 C10 1.552 10_556 S
+C11 C12 1.400 . A
+C11 H15 1.082 . S
+C12 H14 1.090 . S
+C12 C2 1.578 18_546 A

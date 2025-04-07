@@ -1,0 +1,49 @@
+[ defaults ]
+; nbfunc        comb-rule       gen-pairs       fudgeLJ fudgeQQ
+1               2               yes             0.5          0.83333333  
+
+
+[ atomtypes ]
+; name    at.num    mass    charge ptype  sigma      epsilon
+ZA           ZA  67.224000  0.00000000  A     0.16463808      220.72608 ;ZR1
+D1           D1   3.000000  0.00000000  A              0              0 ;ZR1
+D2           D2   3.000000  0.00000000  A              0              0 ;ZR1
+D3           D3   3.000000  0.00000000  A              0              0 ;ZR1
+D4           D4   3.000000  0.00000000  A              0              0 ;ZR1
+D5           D5   3.000000  0.00000000  A              0              0 ;ZR1
+D6           D6   3.000000  0.00000000  A              0              0 ;ZR1
+D7           D7   3.000000  0.00000000  A              0              0 ;ZR1
+D8           D8   3.000000  0.00000000  A              0              0 ;ZR1
+ c        c           0.00000  0.00000   A     3.31521e-01   4.13379e-01
+ ca       ca          0.00000  0.00000   A     3.31521e-01   4.13379e-01
+ cc       cc          0.00000  0.00000   A     3.31521e-01   4.13379e-01
+ cd       cd          0.00000  0.00000   A     3.31521e-01   4.13379e-01
+ cp       cp          0.00000  0.00000   A     3.31521e-01   4.13379e-01
+ ha       ha          0.00000  0.00000   A     2.62548e-01   6.73624e-02
+ o        o           0.00000  0.00000   A     3.04812e-01   6.12119e-01
+OS           OS  16.000000  0.00000000  A     0.31560978      0.3037584 ;OM2
+HO           HO   1.008000  0.00000     A     5.37925e-02   1.96648e-02 ;OH
+O             O  16.00000   0.00000     A     3.04812e-01   6.12119e-01 ;OH
+ hw       hw          0.00000  0.00000   A     0.00000e+00   0.00000e+00
+ ow       ow          0.00000  0.00000   A     3.15061e-01   6.36386e-01
+
+
+#include "itps/Zr.itp"
+#include "itps/EDG.itp"
+#include "itps/O.itp"
+#include "itps/HO.itp"
+#include "itps/HHO.itp"
+
+
+[ system ]
+; Name
+MOF
+
+[ molecules ]
+; Compound     #mols
+EDG               192
+HHO               588
+HO               1176
+MET               882
+O                 588
+TNO               408

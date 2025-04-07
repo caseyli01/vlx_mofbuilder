@@ -145,15 +145,14 @@ def superG_to_eG_ditopic(superG):
             )
             # print('add node',n,'type',superG.nodes[n]['type']) #debug
             superG.nodes[n]["index"] = node_count
-            # add virtual edge
-            for e in superG.edges(n):
-                if superG.edges[e]["type"] == "virtual":
-                    eG.add_edge(e[0], e[1], type="virtual")
 
             neighbors = list(superG.neighbors(n))
             for ne in neighbors:
                 if sorted([n, ne]) in edge_record:
                     continue
+                if superG.edges[n, ne]["type"] == "virtual":
+                    continue
+
                 edge_record.append(sorted([n, ne]))
                 edge_count -= 1
                 eG.add_node(
@@ -178,7 +177,11 @@ def superG_to_eG_ditopic(superG):
                     index="E_" + str(edge_count),
                     type="half",
                 )
-
+    # add virtual edge
+    for e in superG.edges():
+        if superG.edges[e]["type"] == "virtual":
+            eG.add_edge(e[0], e[1], type="virtual")
+            print("add virtual edge", e[0], e[1])  # debug
     return eG, superG
 
 
@@ -376,7 +379,7 @@ def addxoo2edge_ditopic(eG, sc_unit_cell):
                 np.dot(sc_unit_cell, Xs_edge_fpoints[:, 2:5].astype(float).T).T,
             )
         )  # NOTE: modified to skip atom type
-        V_nodes = [i for i in eG.neighbors(n) if pname(i) != "EDGE"]
+        V_nodes = [i for i in eG.neighbors(n) if (pname(i) != "EDGE")]
         if len(V_nodes) == 0:
             # unsaturated_linker.append(n)
             print(

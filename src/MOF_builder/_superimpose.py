@@ -101,18 +101,51 @@ def _superimpose_rotateonly(arr1, arr2, min_rmsd=1e6):
 def superimpose(arr1, arr2, min_rmsd=1e6):
     arr1 = np.asarray(arr1)
     arr2 = np.asarray(arr2)
-    best_rot, best_tran = np.eye(3), np.zeros(3)
     m_arr1, m_arr2 = match_vectors(arr1, arr2, min(6, len(arr1), len(arr2)))
+    best_rot, best_tran = np.eye(3), np.zeros(3)
 
     for perm in itertools.permutations(m_arr1):
-        rmsd, _, _ = svd_superimpose(np.asarray(perm), m_arr2)
+        rmsd, rot, tran = svd_superimpose(np.asarray(perm), m_arr2)
         if rmsd < min_rmsd:
-            min_rmsd, best_rot, best_tran = svd_superimpose(np.asarray(perm), m_arr2)
+            min_rmsd, best_rot, best_tran = rmsd, rot, tran
 
     return min_rmsd, best_rot, best_tran
 
 
-def svd_superimpose(coords, reference_coords):
+def svd_superimpose(inp_arr1, inp_arr2):
+    """
+    Calculates RMSD and rotation matrix for superimposing two sets of points,
+    using SVD. Ref.: "Least-Squares Fitting of Two 3-D Point Sets", IEEE
+    Transactions on Pattern Analysis and Machine Intelligence, 1987, PAMI-9(5),
+    698-700. DOI: 10.1109/TPAMI.1987.4767965
+    inp_arr2 is the reference array, inp_arr1 is the array to be superimposed.
+    """
+
+    arr1 = np.array(inp_arr1)
+    arr2 = np.array(inp_arr2)
+
+    com1 = np.sum(arr1, axis=0) / arr1.shape[0]
+    com2 = np.sum(arr2, axis=0) / arr2.shape[0]
+
+    arr1 -= com1
+    arr2 -= com2
+
+    cov_mat = np.matmul(arr1.T, arr2)
+    U, s, Vt = np.linalg.svd(cov_mat)
+
+    rot_mat = np.matmul(U, Vt)
+    if np.linalg.det(rot_mat) < 0:
+        Vt[-1, :] *= -1.0
+        rot_mat = np.matmul(U, Vt)
+
+    diff = arr2 - np.matmul(arr1, rot_mat)
+    rmsd = np.sqrt(np.sum(diff**2) / diff.shape[0])
+    trans = com2 - np.dot(com1, rot_mat)
+
+    return rmsd, rot_mat, trans
+
+
+def __svd_superimpose(coords, reference_coords):
     """
     Superimpose two sets of 3D points using Singular Value Decomposition (SVD).
 
@@ -163,20 +196,16 @@ def svd_superimpose(coords, reference_coords):
     return rmsd, rot, trans
 
 
-def superimpose_rotateonly(arr1, arr2, min_rmsd=1e6):
+def superimpose_rotation_only(arr1, arr2, min_rmsd=1e6):
     arr1 = np.asarray(arr1)
     arr2 = np.asarray(arr2)
-    best_rot, best_tran = np.eye(3), np.zeros(3)
-
     m_arr1, m_arr2 = match_vectors(arr1, arr2, min(6, len(arr1), len(arr2)))
+    best_rot, best_tran = np.eye(3), np.zeros(3)
     for perm in itertools.permutations(m_arr1):
-        rmsd, _, _ = svd_superimpose(np.asarray(perm), m_arr2)
+        rmsd, rot, tran = svd_superimpose(np.asarray(perm), m_arr2)
         if rmsd < min_rmsd:
-            min_rmsd, best_rot, best_tran = svd_superimpose(np.asarray(perm), m_arr2)
+            min_rmsd, best_rot, best_tran = rmsd, rot, tran
             if np.allclose(np.dot(best_tran, np.zeros(3)), 1e-1):
-                min_rmsd, best_rot, best_tran = svd_superimpose(
-                    np.asarray(perm), m_arr2
-                )
                 break
 
     return min_rmsd, best_rot, best_tran
@@ -204,7 +233,7 @@ if __name__ == "__main__":
         "f",
     )
 
-    a, b, c = superimpose_rotateonly(x, y)
+    a, b, c = superimpose_rotation_only(x, y)
     d, e, f = _superimpose(x, y)
     print(a, b, c)
     print(d, e, f)

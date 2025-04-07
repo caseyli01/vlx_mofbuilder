@@ -59,6 +59,7 @@ def replace_DV_with_corresponding_V(sG):
     v_fc = []
     for n in sG.nodes():
         if sG.nodes[n]["type"] == "DV":
+            print("DV node", n)
             moded_dv_fc.append((n, np.mod(sG.nodes[n]["fcoords"], 1)))
         else:
             v_fc.append((n, sG.nodes[n]["fcoords"]))
@@ -97,7 +98,7 @@ def update_supercell_node_fpoints_loose(sG, supercell):
     # incell_node_res = []
     superG = nx.Graph()
     for n in sG.nodes():
-        if sG.nodes[n]["type"] == "SV":  # get rid of SV, sv will be pnode+i
+        if sG.nodes[n]["type"] != "V":  # get rid of SV, sv will be pnode+i
             superG.add_node(
                 n,
                 f_points=sG.nodes[n]["f_points"],
@@ -117,17 +118,26 @@ def update_supercell_node_fpoints_loose(sG, supercell):
             note=sG.nodes[n]["note"],
         )
 
-        arr = (
-            sG.nodes[n]["f_points"][:, 2:5].astype(float) + supercell
-        )  # NOTE:modified because of extra column of atom type
-        moded_arr = np.mod(arr, 1)
-        arr = arr.astype(float)
-        moded_arr = moded_arr.astype(float)
-        row_diff = [i for i in range(len(arr)) if not np.allclose(arr[i], moded_arr[i])]
-        diff = [arr[i] - moded_arr[i] for i in row_diff]
+        # arr = (
+        #    sG.nodes[n]["f_points"][:, 2:5].astype(float) + supercell
+        # )  # NOTE:modified because of extra column of atom type
+        diffs = (
+            np.mod(sG.nodes[n]["fcoords"], 1)
+            - sG.nodes[n]["fcoords"]
+            + np.asarray(supercell)
+        )
+        diffs = diffs.astype(int)
+        # arr = arr.astype(float)
+        # moded_arr = moded_arr.astype(float)
+        # row_diff = [i for i in range(len(arr)) if not np.allclose(arr[i], moded_arr[i])]
+        # diff = [arr[i] - moded_arr[i] for i in row_diff]
+        ##
+        # diffs = np.round(np.unique(diff, axis=0), 1)
+        # print("diffs", diffs)
+        # diff_ele = split_diffs(diffs)
+        diff_ele = Carte_points_generator(diffs)
+        diff_ele = diff_ele[1:]  # remove the first element [0,0,0]
 
-        diffs = np.round(np.unique(diff, axis=0), 1)
-        diff_ele = split_diffs(diffs)
         # if len(diff_ele) > supercell_Carte.shape[0]:
         #    boundary_node_res.append(n)
         # else:
@@ -136,7 +146,7 @@ def update_supercell_node_fpoints_loose(sG, supercell):
         for diff_e in diff_ele:
             diff_e = np.asarray(diff_e)
             if (pname(n) + "_" + str(lname(n) + diff_e)) in superG.nodes():
-                #print("node already in superG", pname(n) + "_" + str(lname(n) + diff_e))
+                print("node already in superG", pname(n) + "_" + str(lname(n) + diff_e))
                 continue
             superG.add_node(
                 (pname(n) + "_" + str(lname(n) + diff_e)),
@@ -230,6 +240,8 @@ def update_supercell_edge_fpoints(sG, superG, supercell):
                     type="DSE",
                 )
 
+            else:
+                print("edge not in superG", s_edge[0], s_edge[1])
     return superG
 
 
@@ -372,7 +384,7 @@ def nl(s):
     return int(re.sub("a-zA-Z", "", s))
 
 
-def add_virtual_edge(superG, bridge_node_distance, max_neighbor=2):
+def add_virtual_edge(unit_cell, superG, bridge_node_distance, max_neighbor=2):
     # add pillar nodes virtual edges
     nodes_list = [n for n in superG.nodes() if superG.nodes[n]["note"] == "V"]
     n_n_distance_matrix = np.zeros((len(nodes_list), len(nodes_list)))
@@ -380,8 +392,11 @@ def add_virtual_edge(superG, bridge_node_distance, max_neighbor=2):
     for i in range(len(nodes_list)):
         for j in range(len(nodes_list)):
             n_n_distance_matrix[i, j] = np.linalg.norm(
-                superG.nodes[nodes_list[i]]["fcoords"]
-                - superG.nodes[nodes_list[j]]["fcoords"]
+                np.dot(
+                    unit_cell,
+                    superG.nodes[nodes_list[i]]["fcoords"]
+                    - superG.nodes[nodes_list[j]]["fcoords"],
+                )
             )
         n_n_distance_matrix[i, i] = 1000
     # use hungrain algorithm to find the shortest path between all nodes

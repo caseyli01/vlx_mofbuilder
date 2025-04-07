@@ -15,11 +15,26 @@ from v2_functions import (
 )
 import re
 from display import gro_show
+from _output import temp_xyz
+from forcefield import get_residues_forcefield
+from gro_itps import get_gro, get_itps
+from top_combine import genrate_top_file
+from mdps import copy_mdps
 
 
 def nn(s):
     # remove numbers
     return re.sub(r"\d+", "", s)
+
+
+def nn(s):
+    # remove numbers
+    return re.sub(r"\d+", "", s)
+
+
+def nl(s):
+    # remove letters
+    return re.sub(r"[a-zA-Z]", "", s)
 
 
 class MofBuilder:
@@ -147,6 +162,11 @@ class MofBuilder:
     def set_supercell_cleaved_buffer_minus(self, buffer_minus_ratio):
         self.supercell_cleaved_buffer_minus = buffer_minus_ratio
 
+    def set_bridge_node(self, virtual_edge=False, range=0.5, max_neighbor=2):
+        self.brigde_node = True
+        self.brigde_node_search_range = range
+        self.brigde_node_max_neighbor = max_neighbor
+
     def build(self):
         self.preparation.select_mof_family(self.mof_family)
         self.preparation.select_node_metal(self.node_metal)
@@ -218,11 +238,18 @@ class MofBuilder:
             self.net.set_supercell(supercell)
             self.net.place_edge_in_net()
             self.net.make_supercell_ditopic()
+            """bridge node"""
+            self.net.set_virtual_edge(
+                self.brigde_node,
+                self.brigde_node_search_range,
+                self.brigde_node_max_neighbor,
+            )
+
+            self.net.superG = self.net.add_virtual_edge_for_bridge_node(self.net.superG)
             self.net.make_eG_from_supereG_ditopic()
             self.net.main_frag_eG()
             self.archive_eG = self.net.eG.copy()
             self.net.add_xoo_to_edge_ditopic()
-
             self.net.make_supercell_range_cleaved_eG(
                 buffer_plus=cleaved_buffer_plus, buffer_minus=cleaved_buffer_minus
             )
@@ -420,7 +447,10 @@ class MofBuilder:
         for edge_name in self.to_remove_edges_name:
             neighbors = list(self.defective_net.eG.neighbors(edge_name))
             if len(neighbors) == 2:  # ditopic linker case
-                self.defective_net.eG.remove_edge(neighbors[0], neighbors[1])
+                #if edge exists, remove the edge
+                if self.defective_net.eG.has_edge(neighbors[0], neighbors[1]):
+                    self.defective_net.eG.remove_edge(neighbors[0], neighbors[1])
+               
             self.defective_net.eG.remove_node(edge_name)
         # self.defective_net.main_frag_eG()
         # update the matched_vnode_xind
@@ -556,7 +586,7 @@ class MofBuilder:
         print("writing split node gro")
         for splitted_node in [
             metals_list,
-            hho_list,
+            #hho_list,
             ho_list,
             o_list,
             edges_eG,
@@ -574,6 +604,8 @@ class MofBuilder:
         print("o_res_num: ", len(o_list))
         print("edge_res_num: ", len(edges_eG))
         print("term_res_num: ", len(terms_eG))
+        self.merged_split_node_edge_term = merged_split_node_edge_term
+        self.node_split_dict = node_split_dict
 
         save_node_edge_term_gro(merged_split_node_edge_term, gro_name)
 
@@ -613,6 +645,8 @@ class MofBuilder:
             )
 
         save_node_edge_term_gro(merged_split_node_edge_term, gro_name)
+        self.merged_split_node_edge_term = merged_split_node_edge_term
+        self.node_split_dict = node_split_dict
 
         print("metal_res_num: ", len(metals_list))
         print("hho_res_num: ", len(hho_list))
@@ -620,3 +654,49 @@ class MofBuilder:
         print("o_res_num: ", len(o_list))
         print("edge_res_num: ", len(edges_eG))
         print("term_res_num: ", len(terms_eG))
+
+    def md_prepare(self):
+        if not hasattr(self, "linker_file_ff"):
+            self.linker_file_ff = None
+
+        def make_array(lists):
+            arr = np.zeros((len(lists), 7), dtype="object")
+            for idx, line in enumerate(lists):
+                line = line.strip("/n")
+                arr[idx][0] = int(line[0:5])
+                arr[idx][1] = re.sub(r" ", "", str(line[5:10]))  # remove space
+                arr[idx][2] = re.sub(r" ", "", str(line[10:15]))  # remove space
+                arr[idx][3] = int(line[15:20])
+                arr[idx][4] = float(line[20:28]) * 10
+                arr[idx][5] = float(line[28:36]) * 10
+                arr[idx][6] = float(line[36:44]) * 10
+            return arr
+
+        arr, node_split_dict = (
+            make_array(self.merged_split_node_edge_term),
+            self.node_split_dict,
+        )
+        new_arr, self.res_info, self.restypes = get_residues_forcefield(
+            arr,
+            node_split_dict,
+            self.dummy_node,
+            self.linker_xyz_file,
+            self.linker_file_ff,
+            self.linker_topic,
+            self.preparation.linker_center_frag_nodes_num,
+            self.preparation.linker_center_Xs,
+            self.preparation.linker_single_frag_nodes_num,
+            self.preparation.linker_frag_Xs,
+        )
+
+        self.itp_dir = get_itps(
+            self.preparation.data_path,
+            self.restypes,
+            self.node_metal,
+            self.net.node_termination,
+            sol_list=[],
+        )
+        self.top_path = genrate_top_file(
+            self.itp_dir, self.preparation.data_path, self.res_info
+        )
+        self.mdp_dir = copy_mdps(self.preparation.data_path)

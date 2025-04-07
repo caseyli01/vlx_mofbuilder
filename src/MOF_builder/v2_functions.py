@@ -3,7 +3,7 @@ import re
 import os
 import networkx as nx
 from _place_node_edge import fractional_to_cartesian, cartesian_to_fractional
-from _superimpose import superimpose, superimpose_rotateonly
+from _superimpose import superimpose, superimpose_rotation_only
 from _readcif_pdb import process_node_pdb
 from add_dummy2node import nn
 from makesuperG import pname
@@ -13,45 +13,7 @@ def check_inside_unit_cell(point):
     return all([i >= -0.01 and i <= 1.01 for i in point])
 
 
-def find_pair_v_e_c(
-    vvnode333, ecnode333, eenode333, unit_cell
-):  # exist center of linker  in mof
-    G = nx.Graph()
-    pair_ve = []
-    for e in eenode333:
-        # print(e, "check")
-        # dist_v_e = np.linalg.norm(vvnode333 - e, axis=1)
-        dist_v_e = np.linalg.norm(np.dot(unit_cell, (vvnode333 - e).T).T, axis=1)
-        # find two v which are nearest to e, and at least one v is in [0,1] unit cell
-        v1 = vvnode333[np.argmin(dist_v_e)]
-        v1_idx = np.argmin(dist_v_e)
-        dist_c_e = np.linalg.norm(np.dot(unit_cell, (ecnode333 - e).T).T, axis=1)
-        # find two v which are nearest to e, and at least one v is in [0,1] unit cell
-        v2 = ecnode333[np.argmin(dist_c_e)]
-        v2_idx = np.argmin(dist_c_e)
-        # print(v1, v2, "v1,v2")
 
-        # find the center of the pair of v
-        center = (v1 + v2) / 2
-        # check if there is a v in [0,1] unit cell
-        if check_inside_unit_cell(v1) or check_inside_unit_cell(v2):
-            # check if the center of the pair of v is around e
-            # if abs(np.linalg.norm(v1 - e)+np.linalg.norm(v2 - e) - np.linalg.norm(v1 - v2))< 1e-2: #v1,v2,e are colinear
-            if np.linalg.norm(center - e) < 0.1:
-                # print(e,v1,v2,'check')
-                G.add_node("V" + str(v1_idx), fcoords=v1, note="V")
-                G.add_node("CV" + str(v2_idx), fcoords=v2, note="CV")
-                (
-                    G.add_edge(
-                        "V" + str(v1_idx),
-                        "CV" + str(v2_idx),
-                        fcoords=(v1, v2),
-                        fc_center=e,
-                    ),
-                )
-                pair_ve.append(("V" + str(v1_idx), "CV" + str(v2_idx), e))
-
-    return pair_ve, len(pair_ve), G
 
 
 def sort_nodes_by_type_connectivity(G):
@@ -704,7 +666,7 @@ def get_rot_trans_matrix(node, G, sorted_nodes, Xatoms_positions_dict):
     vecsA, _ = recenter_and_norm_vectors(node_xvecs, extra_mass_center=None)
     v2, node_center = get_connected_nodes_vectors(node, G)
     vecsB, _ = recenter_and_norm_vectors(v2, extra_mass_center=node_center)
-    _, rot, tran = superimpose_rotateonly(vecsA, vecsB)
+    _, rot, tran = superimpose_rotation_only(vecsA, vecsB)
     return rot, tran
 
 

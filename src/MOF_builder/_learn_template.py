@@ -261,17 +261,34 @@ def check_moded_fcoords(point):
     return True
 
 
-def find_pair_v_e(vvnode333, eenode333):
+def find_pair_v_e(vvnode333, eenode333, unit_cell, distance_range=[]):
     G = nx.Graph()
     pair_ve = []
     for e in eenode333:
-        dist = np.linalg.norm(vvnode333 - e, axis=1)
-        # find two v which are nearest to e, and at least one v is in [0,1] unit cell
-        v1 = vvnode333[np.argmin(dist)]
-        v1_idx = np.argmin(dist)
-        dist[np.argmin(dist)] = 1000
-        v2 = vvnode333[np.argmin(dist)]
-        v2_idx = np.argmin(dist)
+        dist = np.linalg.norm(np.dot(unit_cell, (vvnode333 - e).T).T, axis=1)
+        if (
+            len(distance_range) == 0
+        ):  # if distance_range is not given, then use the minimum distance match the pair of v
+            v1 = vvnode333[np.argmin(dist)]
+            v1_idx = np.argmin(dist)
+            dist[np.argmin(dist)] = 1000
+            v2 = vvnode333[np.argmin(dist)]
+            v2_idx = np.argmin(dist)
+        else:  # if distance_range is given, then use the distance_range to find the pair of v
+            v1v2_candidates = np.where(
+                (dist > distance_range[0]) & (dist < distance_range[1])
+            )[0]
+            if len(v1v2_candidates) != 2:
+                print("mimimum distance", np.min(dist))
+                print("dist", [d for d in dist if d < distance_range[1]])
+                print(
+                    f"The number of v1v2 candidates are {len(v1v2_candidates)}, which should be 2, please check the distance_range"
+                )
+                continue
+            else:
+                v1_idx, v2_idx = v1v2_candidates
+                v1 = vvnode333[v1_idx]
+                v2 = vvnode333[v2_idx]
         # find the center of the pair of v
         center = (v1 + v2) / 2
         # check if there is a v in [0,1] unit cell
@@ -292,20 +309,23 @@ def find_pair_v_e(vvnode333, eenode333):
     return pair_ve, len(pair_ve), G
 
 
-def find_pair_v_e_c(vvnode333, ecnode333, eenode333):  # exist center of linker  in mof
+def find_pair_v_e_c(
+    vvnode333, ecnode333, eenode333, unit_cell
+):  # exist center of linker  in mof
     G = nx.Graph()
     pair_ve = []
     for e in eenode333:
-        # print(e,'check')
-        dist_v_e = np.linalg.norm(vvnode333 - e, axis=1)
+        # print(e, "check")
+        # dist_v_e = np.linalg.norm(vvnode333 - e, axis=1)
+        dist_v_e = np.linalg.norm(np.dot(unit_cell, (vvnode333 - e).T).T, axis=1)
         # find two v which are nearest to e, and at least one v is in [0,1] unit cell
         v1 = vvnode333[np.argmin(dist_v_e)]
         v1_idx = np.argmin(dist_v_e)
-        dist_c_e = np.linalg.norm(ecnode333 - e, axis=1)
+        dist_c_e = np.linalg.norm(np.dot(unit_cell, (ecnode333 - e).T).T, axis=1)
         # find two v which are nearest to e, and at least one v is in [0,1] unit cell
         v2 = ecnode333[np.argmin(dist_c_e)]
         v2_idx = np.argmin(dist_c_e)
-        # print(v1,v2,'v1,v2')
+        # print(v1, v2, "v1,v2")
 
         # find the center of the pair of v
         center = (v1 + v2) / 2
@@ -479,7 +499,7 @@ if __name__ == "__main__":
     # loop over super333xxnode and super333yynode to find the pair of x node in unicell which pass through the yynode
     vvnode333 = make_supercell_3x3x3(vvnode)
     eenode333 = make_supercell_3x3x3(eenode)
-    pair_vv_e, _, G = find_pair_v_e(vvnode333, eenode333)
+    pair_vv_e, _, G = find_pair_v_e(vvnode333, eenode333, unit_cell)
     G = add_ccoords(G, unit_cell)
     G = set_DV_V(G)
     G = set_DE_E(G)

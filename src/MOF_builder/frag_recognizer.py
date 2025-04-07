@@ -105,34 +105,76 @@ def plot2dedge(lG, coords, cycle, EDGE_length=False):
     plt.show()
 
 
-def find_center_cycle_nodes(lG):
-    # To find center cycle
-    target_nodes = set(nx.center(lG))
-    cycles = list(nx.simple_cycles(lG, length_bound=80))
+# find isolated cycles, which do not share any node with other cycles
+
+
+def find_center_highly_connected_isolated_cycle(lG):
+    # for each isolated cycle, find the one have edge with all other isolated cycles
+    # remove nodes in the cycle from lG, which cycle get the most fragments is the center cycle
+    max_frag_num = 0
+    center_cycle = []
+    cycles = list(nx.simple_cycles(lG, length_bound=200))
     for cycle in cycles:
-        if target_nodes < set(cycle):
-            return cycle
+        lG_temp = lG.copy()
+        lG_temp.remove_nodes_from(cycle)
+        frag_num = nx.number_connected_components(lG_temp)
+        if frag_num > max_frag_num:
+            max_frag_num = frag_num
+            center_cycle = cycle
+    return center_cycle
+
+
+def find_center_cycle_nodes(lG):
+    ## To find center cycle,
+    # target_nodes = set(nx.center(lG))
+    # cycles = list(nx.simple_cycles(lG, length_bound=200))
+    ## find largest cycle
+    # max_cycle_length = 0
+    # for cycle in cycles:
+    #    if not target_nodes.intersection(set(cycle)):
+    #        if len(cycle) > max_cycle_length:
+    #            max_cycle_length = len(cycle)
+    #            center_nodes = cycle
+
+    center_nodes = find_center_highly_connected_isolated_cycle(lG)
+    return center_nodes
+
+
+def check_two_points_center(lG, centers):
+    if nx.shortest_path_length(lG, centers[0], centers[1]) != 1:
+        return False
+    else:
+        G = lG.copy()
+        G.remove_edge(centers[0], centers[1])
+        if nx.number_connected_components(G) == 2:
+            return True
+        else:
+            return False
 
 
 def distinguish_G_centers(lG):
     centers = nx.barycenter(lG)
+    # centers = nx.center(lG)
     if len(centers) == 1:
         print("center is a point")
         center_class = "onepoint"
         center_nodes = centers
     elif len(centers) == 2:
-        if nx.shortest_path_length(lG, centers[0], centers[1]) == 1:
+        if check_two_points_center(lG, centers):
+            # if remove the edge between the two center nodes, the graph will be divided into two parts
             print("center is two points")
             center_class = "twopoints"
             center_nodes = centers
         else:
             print("center is a cycle")
+            lG.remove_edge(centers[0], centers[1])
             center_class = "cycle"
             center_nodes = find_center_cycle_nodes(lG)
     else:
         print("center is a cycle")
         center_class = "cycle"
         center_nodes = find_center_cycle_nodes(lG)
+    print("center_nodes:", center_nodes, "center_class:", center_class, len(centers))
     return center_class, center_nodes
 
 

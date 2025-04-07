@@ -27,11 +27,10 @@ from _place_node_edge import (
     fractional_to_cartesian,
     cartesian_to_fractional,
 )
-from _superimpose import superimpose, superimpose_rotateonly
+from _superimpose import superimpose, superimpose_rotation_only
 from v2_functions import (
     arr_dimension,
     fetch_X_atoms_ind_array,
-    find_pair_v_e_c,
     sort_nodes_by_type_connectivity,
     find_and_sort_edges_bynodeconnectivity,
     is_list_A_in_B,
@@ -70,7 +69,12 @@ from v2_functions import (
     merge_node_edge_term,
     reorder_pairs_for_CV_edgeorder,
 )
-from _learn_template import make_supercell_3x3x3, find_pair_v_e, extract_unit_cell
+from _learn_template import (
+    make_supercell_3x3x3,
+    find_pair_v_e,
+    find_pair_v_e_c,
+    extract_unit_cell,
+)
 from _learn_template import add_ccoords, set_DV_V, set_DE_E
 
 
@@ -190,7 +194,7 @@ class net_optimizer:
         self.eenode333 = eenode333
         self.ecnode333 = ecnode333
 
-    def analyze_template_ditopic(self, template_cif):
+    def analyze_template_ditopic(self, template_cif, pair_v_e_range=[]):
         """
         analyze the template topology of the ditopic linker, only V and E nodes in the template
 
@@ -208,7 +212,9 @@ class net_optimizer:
         ##loop over super333xxnode and super333yynode to find the pair of x node in unicell which pass through the yynode
         vvnode333 = make_supercell_3x3x3(vvnode)
         eenode333 = make_supercell_3x3x3(eenode)
-        _, _, G = find_pair_v_e(vvnode333, eenode333)
+        _, _, G = find_pair_v_e(
+            vvnode333, eenode333, unit_cell, distance_range=pair_v_e_range
+        )
         G = add_ccoords(G, unit_cell)
         G, self.node_max_degree = set_DV_V(G)
         self.G = set_DE_E(G)
@@ -268,7 +274,7 @@ class net_optimizer:
         self.ec_xcoords = np.dot(self.ec_unit_cell, self.ec_x_vecs.T).T
         self.eccoords = np.dot(self.ec_unit_cell, self.ec_fcoords.T).T
 
-    def node_info(self, node_pdb):
+    def node_info(self, node_pdb, com_target_type="X"):
         """
         get the node information
 
@@ -279,7 +285,8 @@ class net_optimizer:
         """
         self.node_pdb = node_pdb
         self.node_atom, self.node_ccoords, self.node_x_ccoords = process_node_pdb(
-            node_pdb, "X"
+            node_pdb,
+            com_target_type,  # TODO: change to the target type X
         )  # com type could be metal in bridge nodes
 
     def linker_info(self, linker_pdb):
@@ -391,7 +398,7 @@ class net_optimizer:
         """
         self.use_saved_rotations_as_initial_guess = use_saved_rotations_as_initial_guess
 
-    def optimize(self):
+    def optimize(self):  # TODO: modified for mil53
         """
         two optimization steps:
         1. optimize the node rotation
@@ -537,25 +544,25 @@ class net_optimizer:
                 np.eye(3, 3).reshape(1, 3, 3).repeat(len(pname_set), axis=0)
             )
 
-            ##
-            # (
-            #    optimized_rotations_pre,
-            #    _,
-            # ) = optimize_rotations_pre(
-            #    num_nodes,
-            #    G,
-            #    sorted_nodes,
-            #    sorted_edges_of_sortednodeidx,
-            #    Xatoms_positions_dict,
-            #    initial_guess_set_rotations,
-            #    pname_set_dict,
-            #    opt_method=self.opt_method,
-            #    maxfun=self.maxfun,
-            #    maxiter=self.maxiter,
-            #    disp=self.display,
-            #    eps=self.eps,
-            #    iprint=self.iprint,
-            # )
+            ####TODO: modified for mil53
+            (
+                optimized_rotations_pre,
+                _,
+            ) = optimize_rotations_pre(
+                num_nodes,
+                G,
+                sorted_nodes,
+                sorted_edges_of_sortednodeidx,
+                Xatoms_positions_dict,
+                initial_guess_set_rotations,
+                pname_set_dict,
+                opt_method=self.opt_method,
+                maxfun=self.maxfun,
+                maxiter=self.maxiter,
+                disp=self.display,
+                eps=self.eps,
+                iprint=self.iprint,
+            )
 
             (
                 optimized_set_rotations,
@@ -566,8 +573,8 @@ class net_optimizer:
                 sorted_nodes,
                 sorted_edges_of_sortednodeidx,
                 Xatoms_positions_dict,
-                initial_guess_set_rotations,
-                # optimized_rotations_pre,
+                # initial_guess_set_rotations,  # TODO: modified for mil53
+                optimized_rotations_pre,
                 pname_set_dict,
                 opt_method=self.opt_method,
                 maxfun=self.maxfun,
@@ -859,7 +866,7 @@ class net_optimizer:
                 rot = rot_record[indices[0]]
                 # rot = reorthogonalize_matrix(rot)
             else:
-                _, rot, _ = superimpose_rotateonly(extended_linker_xx_vec, xx_vector)
+                _, rot, _ = superimpose_rotation_only(extended_linker_xx_vec, xx_vector)
                 # rot = reorthogonalize_matrix(rot)
                 norm_xx_vector_record.append(norm_xx_vector)
                 # the rot may be opposite, so we need to check the angle between the two vectors
@@ -976,18 +983,21 @@ class net_optimizer:
         self.vir_edge_range = range
         self.vir_edge_max_neighbor = max_neighbor
 
-    def add_virtual_edge_for_bridge_node(self):
+    def add_virtual_edge_for_bridge_node(self, superG):
         """
         after setting the virtual edge search, add the virtual edge to the target supercell superG MOF
         """
         if self.add_virtual_edge:
-            superG = add_virtual_edge(
-                self.superG, self.vir_edge_range, self.vir_edge_max_neighbor
+            add_superG = add_virtual_edge(
+                self.sc_unit_cell,
+                superG,
+                self.vir_edge_range,
+                self.vir_edge_max_neighbor,
             )
             print("add virtual edge")
-            self.superG = superG
+            return add_superG
         else:
-            pass
+            return superG
 
     def set_remove_node_list(self, remove_node_list):
         """
@@ -1146,7 +1156,7 @@ class net_optimizer:
         term_coords = term_coords - term_ovecs_c
         term_xoovecs = np.vstack((term_xvecs, term_ovecs))
         term_xoovecs = term_xoovecs - term_ovecs_c
-
+        self.node_termination = term_file
         self.term_info = term_info
         self.term_coords = term_coords
         self.term_xoovecs = term_xoovecs

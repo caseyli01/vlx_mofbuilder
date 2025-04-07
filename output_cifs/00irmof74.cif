@@ -1,0 +1,32 @@
+data_00irmof74_R3  hall_number: 434, V_con: 2
+_audit_creation_date              2025-03-19
+_audit_creation_method            'MOFbuilder_1.0'
+_symmetry_space_group_name_H-M    'P1'
+_symmetry_Int_Tables_number       1
+_symmetry_cell_setting            triclinic
+loop_
+_symmetry_equiv_pos_as_xyz
+  x,y,z
+_cell_length_a                    6.8185
+_cell_length_b                    38.412201
+_cell_length_c                    38.412201
+_cell_angle_alpha                 119.653
+_cell_angle_beta                  93.392097
+_cell_angle_gamma                 93.392097
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+V1    V   0.08800  0.66600  0.36000
+V2    V   0.28000  0.36100  0.69400
+V3    V   0.42200  0.69400  0.33400
+V4    V   0.58600  0.30600  0.67000
+V5    V   0.72800  0.64000  0.30600
+V6    V   0.92000  0.33300  0.63900
+E1    E   0.00000  0.00000  0.50000
+E2    E   0.00000  0.50000  0.00000
+E3    E   0.50000  0.50000  0.00000
+E4    E   0.50000  0.50000  0.50000
+loop_
