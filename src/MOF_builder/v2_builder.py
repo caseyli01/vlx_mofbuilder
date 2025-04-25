@@ -1277,6 +1277,40 @@ class net_optimizer:
         self.edge_res_num = edge_res_num
         self.term_res_num = term_res_num
         self.merged_node_edge_term = merged_node_edge_term
+        def get_node_edge_term_grolines(self, eG, sc_unit_cell):
+        nodes_eG, edges_eG, terms_eG, node_res_num, edge_res_num, term_res_num = (
+            extract_node_edge_term(eG, sc_unit_cell))
+        merged_node_edge_term = merge_node_edge_term(nodes_eG, edges_eG,
+                                                     terms_eG, node_res_num,
+                                                     edge_res_num)
+        print("node_res_num: ", node_res_num)
+        print("edge_res_num: ", edge_res_num)
+        print("term_res_num: ", term_res_num)
+        return merged_node_edge_term
+
+    def extract_node_edge_term(self):
+        self.nodes_eG, self.edges_eG, self.terms_eG, self.node_res_num, self.edge_res_num, self.term_res_num = (
+            extract_node_edge_term(self.eG, self.sc_unit_cell))
+        print("node_res_num: ", self.node_res_num)
+        print("edge_res_num: ", self.edge_res_num)
+        print("term_res_num: ", self.term_res_num)
+
+    def write_node_edge_term_gro(self, gro_name):
+        """
+        write the node, edge, term to the gro file
+        """
+
+        merged_node_edge_term = merge_node_edge_term(self.nodes_eG,
+                                                     self.edges_eG,
+                                                     self.terms_eG,
+                                                     self.node_res_num,
+                                                     self.edge_res_num)
+        dir_name = "output_gros"
+        save_node_edge_term_gro(merged_node_edge_term, gro_name, dir_name)
+        print(str(gro_name) + ".gro is saved in folder " + str(dir_name))
+
+        self.merged_node_edge_term = merged_node_edge_term
+
 
 
 if __name__ == "__main__":
