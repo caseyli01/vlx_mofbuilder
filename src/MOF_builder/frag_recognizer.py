@@ -101,7 +101,11 @@ def plot2dedge(lG, coords, cycle, EDGE_length=False):
 
     # Highlight the cycle in red
     if len(cycle) > 0:
-        nx.draw_networkx_edges(lG, pos, edgelist=cycle, edge_color="r", width=2)
+        nx.draw_networkx_edges(lG,
+                               pos,
+                               edgelist=cycle,
+                               edge_color="r",
+                               width=2)
     plt.show()
 
 
@@ -112,15 +116,27 @@ def find_center_highly_connected_isolated_cycle(lG):
     # for each isolated cycle, find the one have edge with all other isolated cycles
     # remove nodes in the cycle from lG, which cycle get the most fragments is the center cycle
     max_frag_num = 0
+    min_frag_size_std = 1000
     center_cycle = []
     cycles = list(nx.simple_cycles(lG, length_bound=200))
     for cycle in cycles:
         lG_temp = lG.copy()
         lG_temp.remove_nodes_from(cycle)
         frag_num = nx.number_connected_components(lG_temp)
+        #get size of each fragment
+        frag_sizes = [len(f) for f in nx.connected_components(lG_temp)]
+        frag_size_msd = np.std(frag_sizes)
+
         if frag_num > max_frag_num:
             max_frag_num = frag_num
             center_cycle = cycle
+            min_frag_size_std = frag_size_msd
+        elif frag_num == max_frag_num and frag_size_msd < min_frag_size_std:
+            # find the cycle which make all fragments have the similar size
+            max_frag_num = frag_num
+            min_frag_size_std = frag_size_msd
+            center_cycle = cycle
+
     return center_cycle
 
 
@@ -174,7 +190,8 @@ def distinguish_G_centers(lG):
         print("center is a cycle")
         center_class = "cycle"
         center_nodes = find_center_cycle_nodes(lG)
-    print("center_nodes:", center_nodes, "center_class:", center_class, len(centers))
+    print("center_nodes:", center_nodes, "center_class:", center_class,
+          len(centers))
     return center_class, center_nodes
 
 
@@ -204,7 +221,7 @@ def classify_nodes(lG, center_nodes):
 
 def find_center_nodes_pair(lG, center_nodes):
     if len(center_nodes) > 6:
-        centers = nx.center(lG)
+        centers = nx.barycenter(lG)
 
     pairs = []
     for i in range(len(centers)):
@@ -240,22 +257,23 @@ def cleave_outer_frag_subgraph(lG, pairXs, outer_frag_nodes):
     subgraph_outer_frag = lG.subgraph(outer_frag_nodes)
     kick_nodes = []
     for i in list(outer_frag_nodes):
-        if nx.shortest_path_length(
-            subgraph_outer_frag, pairXs[0], i
-        ) > nx.shortest_path_length(subgraph_outer_frag, pairXs[0], pairXs[1]):
+        if nx.shortest_path_length(subgraph_outer_frag, pairXs[0],
+                                   i) > nx.shortest_path_length(
+                                       subgraph_outer_frag, pairXs[0],
+                                       pairXs[1]):
             kick_nodes.append(i)
-        elif nx.shortest_path_length(
-            subgraph_outer_frag, pairXs[1], i
-        ) > nx.shortest_path_length(subgraph_outer_frag, pairXs[0], pairXs[1]):
+        elif nx.shortest_path_length(subgraph_outer_frag, pairXs[1],
+                                     i) > nx.shortest_path_length(
+                                         subgraph_outer_frag, pairXs[0],
+                                         pairXs[1]):
             kick_nodes.append(i)
 
     subgraph_single_frag = lG.subgraph(outer_frag_nodes - set(kick_nodes))
     return subgraph_single_frag
 
 
-def lines_of_center_frag(
-    subgraph_center_frag, Xs_indices, metals, labels, coords, mass_center_angstrom
-):
+def lines_of_center_frag(subgraph_center_frag, Xs_indices, metals, labels,
+                         coords, mass_center_angstrom):
     count = 1
     lines = []
     Xs = []
@@ -324,11 +342,8 @@ def create_cif(name_label_coords, bonds, foldername, cifname):
     print(opath, "is writen")
     with open(opath, "w") as out:
         out.write("data_" + cifname[0:-4] + "\n")
-        out.write(
-            "_audit_creation_date              "
-            + datetime.datetime.today().strftime("%Y-%m-%d")
-            + "\n"
-        )
+        out.write("_audit_creation_date              " +
+                  datetime.datetime.today().strftime("%Y-%m-%d") + "\n")
         out.write("_audit_creation_method            'MOFbuilder'" + "\n")
         out.write("_symmetry_space_group_name_H-M    'P1'" + "\n")
         out.write("_symmetry_Int_Tables_number       1" + "\n")
@@ -356,15 +371,13 @@ def create_cif(name_label_coords, bonds, foldername, cifname):
 
             cvec = np.mod(cvec, 1)
             extra = "   0.00000  Uiso   1.00       -0.000000"
-            out.write(
-                "{:7} {:>4} {:>15} {:>15} {:>15}".format(
-                    l[0],
-                    l[1],
-                    "%.10f" % np.round(cvec[0], 10),
-                    "%.10f" % np.round(cvec[1], 10),
-                    "%.10f" % np.round(cvec[2], 10),
-                )
-            )
+            out.write("{:7} {:>4} {:>15} {:>15} {:>15}".format(
+                l[0],
+                l[1],
+                "%.10f" % np.round(cvec[0], 10),
+                "%.10f" % np.round(cvec[1], 10),
+                "%.10f" % np.round(cvec[2], 10),
+            ))
             out.write(extra)
             out.write("\n")
 
@@ -376,11 +389,8 @@ def create_cif(name_label_coords, bonds, foldername, cifname):
         out.write("_ccdc_geom_bond_type" + "\n")
 
         for b in bonds:
-            out.write(
-                "{:7} {:>7} {:>5} {:>7} {:>3}".format(
-                    b[0], b[1], "%.3f" % float(b[2]), b[3], b[4]
-                )
-            )
+            out.write("{:7} {:>7} {:>5} {:>7} {:>3}".format(
+                b[0], b[1], "%.3f" % float(b[2]), b[3], b[4]))
             out.write("\n")
 
 
@@ -390,7 +400,8 @@ def create_pdb(filename, lines):
         os.makedirs(dir_path)
 
     newpdb = []
-    newpdb.append("PDB file \n" + str(filename) + "   GENERATED BY MOF_builder\n")
+    newpdb.append("PDB file \n" + str(filename) +
+                  "   GENERATED BY MOF_builder\n")
     with open(str(filename) + ".pdb", "w") as fp:
         # Iterate over each line in the input file
         for i in range(len(lines)):
@@ -426,9 +437,10 @@ def create_pdb(filename, lines):
         fp.writelines(newpdb)
 
 
-def process_linker_molecule(
-    molecule, linker_topic, save_nodes_dir="nodes", save_edges_dir="edges"
-):
+def process_linker_molecule(molecule,
+                            linker_topic,
+                            save_nodes_dir="nodes",
+                            save_edges_dir="edges"):
     coords = molecule.get_coordinates_in_angstrom()
     labels = molecule.get_labels()
     # To remove center metals
@@ -450,19 +462,19 @@ def process_linker_molecule(
             linker_C_l = []
             l_list = []
             for n in lG.nodes:
-                if (
-                    lG.nodes[n]["cnodes_l"][0] == center_nodes[k]
-                    and lG.nodes[n]["label"] == "C"
-                ):
+                if (lG.nodes[n]["cnodes_l"][0] == center_nodes[k]
+                        and lG.nodes[n]["label"] == "C"):
                     linker_C_l.append((n, lG.nodes[n]["cnodes_l"]))
                     l_list.append(lG.nodes[n]["cnodes_l"][1])
             center_connected_C_ind = [
                 ind for ind, value in enumerate(l_list) if value == 1
             ]
             outer_connected_C_ind = [
-                ind for ind, value in enumerate(l_list) if value == (max(l_list) - 1)
+                ind for ind, value in enumerate(l_list)
+                if value == (max(l_list) - 1)
             ]
-            if len(center_connected_C_ind) == 1 and len(outer_connected_C_ind) == 1:
+            if len(center_connected_C_ind) == 1 and len(
+                    outer_connected_C_ind) == 1:
                 inner_X = linker_C_l[center_connected_C_ind[0]]
                 outer_X = linker_C_l[outer_connected_C_ind[0]]
                 if center_nodes[k] not in [inner_X[0], outer_X[0]]:
@@ -482,9 +494,8 @@ def process_linker_molecule(
                     Xs_indices += [center_nodes[k], inner_X[0], outer_X[0]]
                     innerX_coords.append(lG.nodes[inner_X[0]]["coords"])
 
-        if (
-            nx.number_connected_components(lG) != linker_topic + 1
-        ):  # for check linker_topics+1
+        if (nx.number_connected_components(lG)
+                != linker_topic + 1):  # for check linker_topics+1
             print("wrong fragments")
             raise ValueError
 
@@ -496,16 +507,13 @@ def process_linker_molecule(
                 linker_C_l = []
                 l_list = []
                 for n in lG.nodes:
-                    if (
-                        lG.nodes[n]["cnodes_l"][0] == center_nodes[k]
-                        and lG.nodes[n]["label"] == "C"
-                    ):
+                    if (lG.nodes[n]["cnodes_l"][0] == center_nodes[k]
+                            and lG.nodes[n]["label"] == "C"):
                         linker_C_l.append((n, lG.nodes[n]["cnodes_l"]))
                         l_list.append(lG.nodes[n]["cnodes_l"][1])
 
                 outer_connected_C_ind = [
-                    ind
-                    for ind, value in enumerate(l_list)
+                    ind for ind, value in enumerate(l_list)
                     if value == (max(l_list) - 1)
                 ]
 
@@ -521,15 +529,14 @@ def process_linker_molecule(
             linker_C_l = []
             l_list = []
             for n in lG.nodes:
-                if (
-                    lG.nodes[n]["cnodes_l"][0] == center_nodes[0]
-                    and lG.nodes[n]["label"] == "C"
-                ):
+                if (lG.nodes[n]["cnodes_l"][0] == center_nodes[0]
+                        and lG.nodes[n]["label"] == "C"):
                     linker_C_l.append((n, lG.nodes[n]["cnodes_l"]))
                     l_list.append(lG.nodes[n]["cnodes_l"][1])
 
             outer_connected_C_ind = [
-                ind for ind, value in enumerate(l_list) if value == (max(l_list) - 1)
+                ind for ind, value in enumerate(l_list)
+                if value == (max(l_list) - 1)
             ]
             for m in range(len(outer_connected_C_ind)):
                 outer_X = linker_C_l[outer_connected_C_ind[m]]
@@ -543,15 +550,12 @@ def process_linker_molecule(
                 linker_C_l = []
                 l_list = []
                 for n in lG.nodes:
-                    if (
-                        lG.nodes[n]["cnodes_l"][0] == center_nodes[k]
-                        and lG.nodes[n]["label"] == "C"
-                    ):
+                    if (lG.nodes[n]["cnodes_l"][0] == center_nodes[k]
+                            and lG.nodes[n]["label"] == "C"):
                         linker_C_l.append((n, lG.nodes[n]["cnodes_l"]))
                         l_list.append(lG.nodes[n]["cnodes_l"][1])
                 outer_connected_C_ind = [
-                    ind
-                    for ind, value in enumerate(l_list)
+                    ind for ind, value in enumerate(l_list)
                     if value == (max(l_list) - 1)
                 ]
                 if len(outer_connected_C_ind) == 1:
@@ -582,7 +586,8 @@ def process_linker_molecule(
     # write cifs
 
     if linker_topic > 2:  # multitopic
-        frag_nodes = list(sorted(nx.connected_components(lG), key=len, reverse=True))
+        frag_nodes = list(
+            sorted(nx.connected_components(lG), key=len, reverse=True))
         for f in frag_nodes:
             if set(center_nodes) < set(f):
                 center_frag_nodes = f
@@ -598,20 +603,24 @@ def process_linker_molecule(
             coords,
             mass_center_angstrom,
         )
-        center_frag_bonds = get_bonds_from_subgraph(subgraph_center_frag, Xs_indices)
+        center_frag_bonds = get_bonds_from_subgraph(subgraph_center_frag,
+                                                    Xs_indices)
         subgraph_center_frag_edges = list(subgraph_center_frag.edges)
         # plot2dedge(lG,coords,subgraph_center_frag_edges,True)
         # plot2dedge(lG,coords,subgraph_center_frag_edges,False)
         pairXs = get_pairX_outer_frag(connected_pairXs, outer_frag_nodes)
-        subgraph_single_frag = cleave_outer_frag_subgraph(lG, pairXs, outer_frag_nodes)
+        subgraph_single_frag = cleave_outer_frag_subgraph(
+            lG, pairXs, outer_frag_nodes)
         rows, frag_Xs = lines_of_single_frag(subgraph_single_frag, Xs_indices)
-        single_frag_bonds = get_bonds_from_subgraph(subgraph_single_frag, Xs_indices)
+        single_frag_bonds = get_bonds_from_subgraph(subgraph_single_frag,
+                                                    Xs_indices)
         if linker_topic == 3:
-            print(
-                "linker_center_frag:", subgraph_center_frag.number_of_nodes(), center_Xs
-            )
-            print("linker_outer_frag:", subgraph_single_frag.number_of_nodes(), frag_Xs)
-            linker_center_node_pdb_name = os.path.join(save_nodes_dir, "tricenter")
+            print("linker_center_frag:",
+                  subgraph_center_frag.number_of_nodes(), center_Xs)
+            print("linker_outer_frag:", subgraph_single_frag.number_of_nodes(),
+                  frag_Xs)
+            linker_center_node_pdb_name = os.path.join(save_nodes_dir,
+                                                       "tricenter")
             create_pdb(linker_center_node_pdb_name, lines)
             linker_branch_pdb_name = os.path.join(save_edges_dir, "triedge")
             create_pdb(linker_branch_pdb_name, rows)
@@ -626,9 +635,12 @@ def process_linker_molecule(
                 linker_branch_pdb_name + ".pdb",
             )
         elif linker_topic == 4:
-            print("center_frag:", subgraph_center_frag.number_of_nodes(), center_Xs)
-            print("outer_frag:", subgraph_single_frag.number_of_nodes(), frag_Xs)
-            linker_center_node_pdb_name = os.path.join(save_nodes_dir, "tetracenter")
+            print("center_frag:", subgraph_center_frag.number_of_nodes(),
+                  center_Xs)
+            print("outer_frag:", subgraph_single_frag.number_of_nodes(),
+                  frag_Xs)
+            linker_center_node_pdb_name = os.path.join(save_nodes_dir,
+                                                       "tetracenter")
             create_pdb(linker_center_node_pdb_name, lines)
             linker_branch_pdb_name = os.path.join(save_edges_dir, "tetraedge")
             create_pdb(linker_branch_pdb_name, rows)
@@ -643,7 +655,8 @@ def process_linker_molecule(
                 linker_branch_pdb_name + ".pdb",
             )
         else:
-            linker_center_node_pdb_name = os.path.join(save_nodes_dir, "multicenter")
+            linker_center_node_pdb_name = os.path.join(save_nodes_dir,
+                                                       "multicenter")
             create_pdb(linker_center_node_pdb_name, lines)
             linker_branch_pdb_name = os.path.join(save_edges_dir, "multiedge")
             create_pdb(linker_branch_pdb_name, rows)
@@ -673,11 +686,13 @@ def process_linker_molecule(
             coords,
             mass_center_angstrom,
         )
-        center_frag_bonds = get_bonds_from_subgraph(subgraph_center_frag, Xs_indices)
+        center_frag_bonds = get_bonds_from_subgraph(subgraph_center_frag,
+                                                    Xs_indices)
         # create_cif(lines,center_frag_bonds,'edges','diedge.cif')
         edge_pdb_name = os.path.join(save_edges_dir, "diedge")
         create_pdb(edge_pdb_name, lines)
-        print("linker_center_frag:", subgraph_center_frag.number_of_nodes(), center_Xs)
+        print("linker_center_frag:", subgraph_center_frag.number_of_nodes(),
+              center_Xs)
         return (
             subgraph_center_frag.number_of_nodes(),
             center_Xs,

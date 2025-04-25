@@ -736,18 +736,30 @@ def add_dummy_atoms_nodepdb(pdbfile, metal, nodeG):
     oxygen_nodes = [n for n in list(sG.nodes()) if nn(n) == "O"]
     metal_nodes = [n for n in list(sG.nodes()) if nn(n) == metal]
     print("metal_nodes", metal_nodes)
+    for metal_n in metal_nodes:
+        dist = []
+        for oxy_n in oxygen_nodes:
+            dist.append((oxy_n,np.linalg.norm(sG.nodes[metal_n]['ccoords']-sG.nodes[oxy_n]['ccoords'])))
+        sorted_dist = sorted(dist,key=lambda x:x[1])[:2*metal_valence]
+        for (oxy_node,dist) in sorted_dist:
+            if oxy_node not in sG.adj[metal_n]:
+                sG.add_edge(metal_n,oxy_node)
 
     count = ind_max + 1
     for mn in metal_nodes:
         neighbor_nodes = sG.adj[mn].copy()
         # print(neighbor_nodes, mn)
         Ocheck = all(nn(i) == "O" for i in neighbor_nodes)
+
+        
         if len(neighbor_nodes) == 2 * metal_valence and Ocheck:
             # add dummy
             beginning_cc = sG.nodes[mn]["ccoords"]
             d_ccoords = []
             for nO in neighbor_nodes:
                 sO = sG.nodes[nO]["ccoords"]
+                sO = np.round(sO, 4)
+                beginning_cc = np.round(beginning_cc, 4)
                 cnorm_vec = (sO - beginning_cc) / np.linalg.norm(
                     sO - beginning_cc)  # 1 angstrom
                 # f_vec = np.dot(np.linalg.inv(unit_cell),cnorm_vec)

@@ -38,6 +38,7 @@ def nl(s):
 
 
 class MofBuilder:
+
     def __init__(self):
         # call preparation driver
         # find database path which should be decided later
@@ -48,6 +49,7 @@ class MofBuilder:
         self.linker_xyz_file = None
         self.supercell = (1, 1, 1)
         self.dummy_node = False
+        self.bridge_node = False
 
     def show_available_mof_families(self):
         self.preparation.list_mof_family()
@@ -69,9 +71,8 @@ class MofBuilder:
             self.node_pdb = preparation.selected_node_pdb_file
             self.node_metal = preparation.node_metal
             self.linker_pdb = preparation.selected_linker_edge_pdb
-            self.linker_center_pdb = (
-                preparation.selected_linker_center_pdb
-            )  # could be None if ditopic linker
+            self.linker_center_pdb = (preparation.selected_linker_center_pdb
+                                      )  # could be None if ditopic linker
             self.linker_topic = preparation.linker_topic
             self.linker_xyz = preparation.linker_xyz
             return True
@@ -130,10 +131,10 @@ class MofBuilder:
         saved_optimized_rotations = saved_optimized_rotations + ".npy"
 
         if os.path.exists(saved_optimized_rotations):
-            self.saved_optimized_rotations = np.load(
-                saved_optimized_rotations, allow_pickle=True
-            )
-            print("Optimized rotations are loaded from: ", saved_optimized_rotations)
+            self.saved_optimized_rotations = np.load(saved_optimized_rotations,
+                                                     allow_pickle=True)
+            print("Optimized rotations are loaded from: ",
+                  saved_optimized_rotations)
         else:
             print(
                 f"Could not find the saved optimized rotations:  {saved_optimized_rotations} will start the optimization from the beginning"
@@ -141,15 +142,13 @@ class MofBuilder:
             pass
 
     def set_use_saved_rotations_as_initial_guess(
-        self, use_saved_rotations_as_initial_guess
-    ):
+            self, use_saved_rotations_as_initial_guess):
         """
         use the saved optimized rotations as initial guess
         """
         if hasattr(self, "saved_optimized_rotations"):
             self.use_saved_rotations_as_initial_guess = (
-                use_saved_rotations_as_initial_guess
-            )
+                use_saved_rotations_as_initial_guess)
         else:
             print(
                 "saved_optimized_rotations is not found, will start the optimization from the beginning"
@@ -182,7 +181,8 @@ class MofBuilder:
         # check before building
         if not hasattr(self, "supercell"):
             self.supercell = (1, 1, 1)
-        self.supercell = list([self.supercell[0], self.supercell[1], self.supercell[2]])
+        self.supercell = list(
+            [self.supercell[0], self.supercell[1], self.supercell[2]])
 
         if self.linker_topic == 2:
             print("ditopic mof builder driver is called")
@@ -195,26 +195,33 @@ class MofBuilder:
             if hasattr(self, "connection_constant_length"):
                 self.net.set_constant_length(self.connection_constant_length)
             if hasattr(self, "rotation_optimizer_maxfun"):
-                self.net.set_rotation_optimizer_maxfun(self.rotation_optimizer_maxfun)
+                self.net.set_rotation_optimizer_maxfun(
+                    self.rotation_optimizer_maxfun)
             if hasattr(self, "rotation_optimizer_maxiter"):
-                self.net.set_rotation_optimizer_maxiter(self.rotation_optimizer_maxiter)
+                self.net.set_rotation_optimizer_maxiter(
+                    self.rotation_optimizer_maxiter)
             if hasattr(self, "rotation_optimizer_method"):
-                self.net.set_rotation_optimizer_method(self.rotation_optimizer_method)
+                self.net.set_rotation_optimizer_method(
+                    self.rotation_optimizer_method)
             if hasattr(self, "rotation_optimizer_eps"):
-                self.net.set_rotation_optimizer_eps(self.rotation_optimizer_eps)
+                self.net.set_rotation_optimizer_eps(
+                    self.rotation_optimizer_eps)
             if hasattr(self, "rotation_optimizer_iprint"):
-                self.net.set_rotation_optimizer_iprint(self.rotation_optimizer_iprint)
+                self.net.set_rotation_optimizer_iprint(
+                    self.rotation_optimizer_iprint)
             if hasattr(self, "rotation_optimizer_display"):
-                self.net.set_rotation_optimizer_display(self.rotation_optimizer_display)
+                self.net.set_rotation_optimizer_display(
+                    self.rotation_optimizer_display)
 
             if hasattr(self, "saved_optimized_rotations"):
-                self.net.load_saved_optimized_rotations(self.saved_optimized_rotations)
+                self.net.load_saved_optimized_rotations(
+                    self.saved_optimized_rotations)
             if hasattr(self, "optimized_rotations_filename"):
-                self.net.to_save_optimized_rotations(self.optimized_rotations_filename)
+                self.net.to_save_optimized_rotations(
+                    self.optimized_rotations_filename)
             if hasattr(self, "use_saved_rotations_as_initial_guess"):
                 self.net.use_saved_rotations_as_initial_guess(
-                    self.use_saved_rotations_as_initial_guess
-                )
+                    self.use_saved_rotations_as_initial_guess)
 
             self.net.analyze_template_ditopic(template_cif)
             self.net.node_info(node_pdb)
@@ -223,7 +230,8 @@ class MofBuilder:
             print("-" * 80)
             print(
                 " " * 15,
-                "Building time cost: %.5f seconds " % (time.time() - start_time),
+                "Building time cost: %.5f seconds " %
+                (time.time() - start_time),
             )
             print("-" * 80)
             if hasattr(self, "supercell_cleaved_buffer_plus"):
@@ -239,20 +247,22 @@ class MofBuilder:
             self.net.place_edge_in_net()
             self.net.make_supercell_ditopic()
             """bridge node"""
-            self.net.set_virtual_edge(
-                self.brigde_node,
-                self.brigde_node_search_range,
-                self.brigde_node_max_neighbor,
-            )
+            if self.bridge_node:
+                self.net.set_virtual_edge(
+                    self.bridge_node,
+                    self.bridge_node_search_range,
+                    self.bridge_node_max_neighbor,
+                )
 
-            self.net.superG = self.net.add_virtual_edge_for_bridge_node(self.net.superG)
+                self.net.superG = self.net.add_virtual_edge_for_bridge_node(
+                    self.net.superG)
             self.net.make_eG_from_supereG_ditopic()
             self.net.main_frag_eG()
             self.archive_eG = self.net.eG.copy()
             self.net.add_xoo_to_edge_ditopic()
             self.net.make_supercell_range_cleaved_eG(
-                buffer_plus=cleaved_buffer_plus, buffer_minus=cleaved_buffer_minus
-            )
+                buffer_plus=cleaved_buffer_plus,
+                buffer_minus=cleaved_buffer_minus)
             self.net.find_unsaturated_node_eG()
             # self.net.add_xoo_to_edge_ditopic()
 
@@ -260,10 +270,8 @@ class MofBuilder:
                 self.net.set_node_terminamtion(self.node_termination)
             # default termination is methyl in data folder
             self.net.set_node_terminamtion(
-                os.path.join(
-                    self.preparation.data_path, "terminations_database/methyl.pdb"
-                )
-            )
+                os.path.join(self.preparation.data_path,
+                             "terminations_database/methyl.pdb"))
             ##TODO:
             # update  self.net.unsaturated_node  and self.net.matched_vnode_xind
             self.net.add_terminations_to_unsaturated_node()
@@ -283,28 +291,35 @@ class MofBuilder:
                 self.net.set_constant_length(self.connection_constant_length)
 
             if hasattr(self, "rotation_optimizer_maxfun"):
-                self.net.set_rotation_optimizer_maxfun(self.rotation_optimizer_maxfun)
+                self.net.set_rotation_optimizer_maxfun(
+                    self.rotation_optimizer_maxfun)
             if hasattr(self, "rotation_optimizer_maxiter"):
-                self.net.set_rotation_optimizer_maxiter(self.rotation_optimizer_maxiter)
+                self.net.set_rotation_optimizer_maxiter(
+                    self.rotation_optimizer_maxiter)
             if hasattr(self, "rotation_optimizer_method"):
-                self.net.set_rotation_optimizer_method(self.rotation_optimizer_method)
+                self.net.set_rotation_optimizer_method(
+                    self.rotation_optimizer_method)
 
             if hasattr(self, "rotation_optimizer_eps"):
-                self.net.set_rotation_optimizer_eps(self.rotation_optimizer_eps)
+                self.net.set_rotation_optimizer_eps(
+                    self.rotation_optimizer_eps)
 
             if hasattr(self, "rotation_optimizer_iprint"):
-                self.net.set_rotation_optimizer_iprint(self.rotation_optimizer_iprint)
+                self.net.set_rotation_optimizer_iprint(
+                    self.rotation_optimizer_iprint)
             if hasattr(self, "rotation_optimizer_display"):
-                self.net.set_rotation_optimizer_display(self.rotation_optimizer_display)
+                self.net.set_rotation_optimizer_display(
+                    self.rotation_optimizer_display)
 
             if hasattr(self, "saved_optimized_rotations"):
-                self.net.load_saved_optimized_rotations(self.saved_optimized_rotations)
+                self.net.load_saved_optimized_rotations(
+                    self.saved_optimized_rotations)
             if hasattr(self, "optimized_rotations_filename"):
-                self.net.to_save_optimized_rotations(self.optimized_rotations_filename)
+                self.net.to_save_optimized_rotations(
+                    self.optimized_rotations_filename)
             if hasattr(self, "use_saved_rotations_as_initial_guess"):
                 self.net.use_saved_rotations_as_initial_guess(
-                    self.use_saved_rotations_as_initial_guess
-                )
+                    self.use_saved_rotations_as_initial_guess)
 
             self.net.analyze_template_multitopic(template_cif)
             self.net.node_info(node_pdb)
@@ -314,7 +329,8 @@ class MofBuilder:
             print("-" * 80)
             print(
                 " " * 15,
-                "Building time cost: %.5f seconds " % (time.time() - start_time),
+                "Building time cost: %.5f seconds " %
+                (time.time() - start_time),
             )
             print("-" * 80)
             if hasattr(self, "supercell_cleaved_buffer_plus"):
@@ -334,18 +350,16 @@ class MofBuilder:
             self.archive_eG = self.net.eG.copy()
             self.net.add_xoo_to_edge_multitopic()
             self.net.make_supercell_range_cleaved_eG(
-                buffer_plus=cleaved_buffer_plus, buffer_minus=cleaved_buffer_minus
-            )
+                buffer_plus=cleaved_buffer_plus,
+                buffer_minus=cleaved_buffer_minus)
 
             self.net.find_unsaturated_node_eG()
             if hasattr(self, "node_termination"):
                 self.net.set_node_terminamtion(self.node_termination)
             # default termination is methyl in data folder
             self.net.set_node_terminamtion(
-                os.path.join(
-                    self.preparation.data_path, "terminations_database/methyl.pdb"
-                )
-            )
+                os.path.join(self.preparation.data_path,
+                             "terminations_database/methyl.pdb"))
             self.net.add_terminations_to_unsaturated_node()
             self.net.remove_xoo_from_node()
 
@@ -360,16 +374,14 @@ class MofBuilder:
         if gro_name is not None:
             self.gro_name = gro_name
         else:
-            self.gro_name = (
-                "mof_"
-                + str(self.mof_family.split(".")[0])
-                + "_"
-                + self.linker_xyz.strip(".xyz")
-            )
-            print("gro_name is not set, will be saved as: ", self.gro_name + ".gro")
+            self.gro_name = ("mof_" + str(self.mof_family.split(".")[0]) +
+                             "_" + self.linker_xyz.strip(".xyz"))
+            print("gro_name is not set, will be saved as: ",
+                  self.gro_name + ".gro")
 
         print("writing gro file")
-        print("nodes:", len(self.net.eG.nodes()), "edges:", len(self.net.eG.edges()))
+        print("nodes:", len(self.net.eG.nodes()), "edges:",
+              len(self.net.eG.edges()))
         self.net.write_node_edge_node_gro(self.gro_name)
 
         # temp_save_eGterm_gro(net.eG,net.sc_unit_cell) #debugging
@@ -386,15 +398,15 @@ class MofBuilder:
         )
 
     # functions are under construction
-    def make_defects_missing(
-        self, update_node_term=False, clean_unsaturated_linkers=False
-    ):
-        self.saved_eG = self.net.eG.copy()  # save the original eG before making defects
+    def make_defects_missing(self,
+                             update_node_term=False,
+                             clean_unsaturated_linkers=False):
+        self.saved_eG = self.net.eG.copy(
+        )  # save the original eG before making defects
         self.saved_eG_unsaturated_node = self.net.unsaturated_node
         self.saved_eG_matched_vnode_xind = self.net.matched_vnode_xind
         self.saved_eG_unsaturated_linker = find_unsaturated_linker(
-            self.net.eG, self.linker_topic
-        )
+            self.net.eG, self.linker_topic)
         self.saved_supercell = self.supercell
         # herit the original net to defective net
         self.defective_net = self.net
@@ -419,11 +431,9 @@ class MofBuilder:
             ]  # TODO: check if it is correct
 
         self.to_remove_nodes_name = extract_node_name_from_gro_resindex(
-            remove_node_list, self.net.nodes_eG
-        )
+            remove_node_list, self.net.nodes_eG)
         self.to_remove_edges_name = extract_node_name_from_gro_resindex(
-            remove_edge_list, self.net.edges_eG
-        )
+            remove_edge_list, self.net.edges_eG)
 
         if hasattr(self, "supercell_cleaved_buffer_plus"):
             cleaved_buffer_plus = self.supercell_cleaved_buffer_plus
@@ -449,8 +459,9 @@ class MofBuilder:
             if len(neighbors) == 2:  # ditopic linker case
                 #if edge exists, remove the edge
                 if self.defective_net.eG.has_edge(neighbors[0], neighbors[1]):
-                    self.defective_net.eG.remove_edge(neighbors[0], neighbors[1])
-               
+                    self.defective_net.eG.remove_edge(neighbors[0],
+                                                      neighbors[1])
+
             self.defective_net.eG.remove_node(edge_name)
         # self.defective_net.main_frag_eG()
         # update the matched_vnode_xind
@@ -469,8 +480,7 @@ class MofBuilder:
             len(self.defective_net.eG.edges),
         )
         self.defective_net.make_supercell_range_cleaved_eG(
-            buffer_plus=cleaved_buffer_plus, buffer_minus=cleaved_buffer_minus
-        )
+            buffer_plus=cleaved_buffer_plus, buffer_minus=cleaved_buffer_minus)
 
         if update_node_term:
             self.defective_net.find_unsaturated_node_eG()
@@ -499,11 +509,11 @@ class MofBuilder:
         if hasattr(self, "exchange_edge_list"):
             exchange_edge_list = self.exchange_edge_list
             exchange_edge_list = [
-                str(int(i) - len(self.net.nodes_eG)) for i in exchange_edge_list
+                str(int(i) - len(self.net.nodes_eG))
+                for i in exchange_edge_list
             ]  # TODO: check if it is correct
             exchange_edges_name = extract_node_name_from_gro_resindex(
-                exchange_edge_list, self.net.edges_eG
-            )
+                exchange_edge_list, self.net.edges_eG)
 
         # if hasattr(self, 'to_exchange_node_pdb'):
         #    to_exchange_node_pdb = self.to_exchange_node_pdb
@@ -512,8 +522,7 @@ class MofBuilder:
         # TODO:
 
         if hasattr(self, "exchange_edge_list") and hasattr(
-            self, "to_exchange_edge_pdb"
-        ):
+                self, "to_exchange_edge_pdb"):
             print(
                 "exchange_edge_list and to_exchange_edge_pdb are set, will exchange the edges"
             )
@@ -539,12 +548,9 @@ class MofBuilder:
         #    return
 
         if not hasattr(self, "defect_gro_name"):
-            self.defect_gro_name = (
-                "defective_mof_"
-                + str(self.mof_family.split(".")[0])
-                + "_"
-                + self.linker_xyz.strip(".xyz")
-            )
+            self.defect_gro_name = ("defective_mof_" +
+                                    str(self.mof_family.split(".")[0]) + "_" +
+                                    self.linker_xyz.strip(".xyz"))
             print(
                 "defect_gro_name is not set, will be saved as: ",
                 self.defect_gro_name + ".gro",
@@ -553,9 +559,11 @@ class MofBuilder:
 
         self.defective_net.write_node_edge_node_gro(self.defect_gro_name)
 
-    def show_defective_model(
-        self, width=800, height=600, res_indices=False, res_names=False
-    ):
+    def show_defective_model(self,
+                             width=800,
+                             height=600,
+                             res_indices=False,
+                             res_names=False):
         gro_file_path = os.path.join("output_gros", self.defect_gro_name)
         print("showing the gromacs file", gro_file_path)
         gro_show(
@@ -570,33 +578,33 @@ class MofBuilder:
         if not self.preparation.dummy_node:
             print("dummy node is not used, splitting node is not possible")
             return
-        print("splitting node and saving gro again, called after write_defect_gro()")
+        print(
+            "splitting node and saving gro again, called after write_defect_gro()"
+        )
         nodes_eG = self.defective_net.nodes_eG
         edges_eG = self.defective_net.edges_eG
         terms_eG = self.defective_net.terms_eG
         node_split_dict = make_dummy_split_node_dict(self.node_pdb)
         nodes_eGarr = np.vstack(nodes_eG)
         metals_list, hho_list, ho_list, o_list = rename_node_arr(
-            node_split_dict, nodes_eGarr
-        )
+            node_split_dict, nodes_eGarr)
 
         merged_split_node_edge_term = []
         line_num = 0
         res_count = 0
         print("writing split node gro")
         for splitted_node in [
-            metals_list,
-            #hho_list,
-            ho_list,
-            o_list,
-            edges_eG,
-            terms_eG,
+                metals_list,
+                hho_list,
+                ho_list,
+                o_list,
+                edges_eG,
+                terms_eG,
         ]:
             merged_split_node_edge_term, line_num, res_count = (
-                merge_metal_list_to_node_array(
-                    merged_split_node_edge_term, splitted_node, line_num, res_count
-                )
-            )
+                merge_metal_list_to_node_array(merged_split_node_edge_term,
+                                               splitted_node, line_num,
+                                               res_count))
 
         print("metal_res_num: ", len(metals_list))
         print("hho_res_num: ", len(hho_list))
@@ -623,26 +631,24 @@ class MofBuilder:
         node_split_dict = make_dummy_split_node_dict(self.node_pdb)
         nodes_eGarr = np.vstack(nodes_eG)
         metals_list, hho_list, ho_list, o_list = rename_node_arr(
-            node_split_dict, nodes_eGarr
-        )
+            node_split_dict, nodes_eGarr)
 
         merged_split_node_edge_term = []
         line_num = 0
         res_count = 0
         print("writing split node gro")
         for splitted_node in [
-            metals_list,
-            hho_list,
-            ho_list,
-            o_list,
-            edges_eG,
-            terms_eG,
+                metals_list,
+                hho_list,
+                ho_list,
+                o_list,
+                edges_eG,
+                terms_eG,
         ]:
             merged_split_node_edge_term, line_num, res_count = (
-                merge_metal_list_to_node_array(
-                    merged_split_node_edge_term, splitted_node, line_num, res_count
-                )
-            )
+                merge_metal_list_to_node_array(merged_split_node_edge_term,
+                                               splitted_node, line_num,
+                                               res_count))
 
         save_node_edge_term_gro(merged_split_node_edge_term, gro_name)
         self.merged_split_node_edge_term = merged_split_node_edge_term
@@ -665,7 +671,8 @@ class MofBuilder:
                 line = line.strip("/n")
                 arr[idx][0] = int(line[0:5])
                 arr[idx][1] = re.sub(r" ", "", str(line[5:10]))  # remove space
-                arr[idx][2] = re.sub(r" ", "", str(line[10:15]))  # remove space
+                arr[idx][2] = re.sub(r" ", "",
+                                     str(line[10:15]))  # remove space
                 arr[idx][3] = int(line[15:20])
                 arr[idx][4] = float(line[20:28]) * 10
                 arr[idx][5] = float(line[28:36]) * 10
@@ -696,7 +703,7 @@ class MofBuilder:
             self.net.node_termination,
             sol_list=[],
         )
-        self.top_path = genrate_top_file(
-            self.itp_dir, self.preparation.data_path, self.res_info
-        )
+        self.top_path = genrate_top_file(self.itp_dir,
+                                         self.preparation.data_path,
+                                         self.res_info)
         self.mdp_dir = copy_mdps(self.preparation.data_path)
