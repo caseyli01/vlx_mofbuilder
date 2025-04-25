@@ -262,9 +262,10 @@ def extract_node_edge_term(tG, sc_unit_cell):
                     terms_check_set.add(len(c_positions))
                     name = "T" + tG.nodes[n]["name"]
                     terms_name_set.add(name)
-                    if len(terms_check_set) > len(terms_name_set):
-                        raise ValueError("term index is not continuous")
-
+                    if len(nodes_check_set) > len(nodes_name_set):
+                        raise ValueError(
+                            "node index is not continuous, MOF have too many mixed nodes?"
+                        )
                     term_res_num += 1
                     terms_tG.append(
                         np.hstack((
@@ -448,6 +449,10 @@ def replace_edges_by_callname(edge_n_list,
     new_linker_atoms, new_linker_ccoords, new_linker_x_ccoords = process_node_pdb(
         new_linker_pdb, "X")
     for edge_n in edge_n_list:
+        # check if edge_n is in eG
+        if edge_n not in eG.nodes():
+            print("this linker is not in MOF, will be skipped", edge_n)
+            continue
         edge_n = edge_n
         edge_f_points = eG.nodes[edge_n]["f_points"]
         x_indices = [
@@ -469,7 +474,7 @@ def replace_edges_by_callname(edge_n_list,
             (new_linker_atoms, replaced_linker_fcoords))
 
         eG.nodes[edge_n]["f_points"] = replaced_linker_f_points
-        eG.nodes[edge_n]["name"] = prefix + eG.nodes[edge_n]["name"]
+        eG.nodes[edge_n]["name"] = prefix + edge_n
 
     return eG
 
