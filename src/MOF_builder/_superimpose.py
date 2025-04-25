@@ -1,6 +1,4 @@
 import numpy as np
-
-from Bio.SVDSuperimposer import SVDSuperimposer
 import itertools
 from numpy.linalg import norm
 
