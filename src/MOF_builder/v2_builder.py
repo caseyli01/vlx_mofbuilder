@@ -887,8 +887,7 @@ class net_optimizer:
                             axis = np.array([0, 0, 1])
 
                     axis = axis / np.linalg.norm(axis)
-                    flip_matrix = R.from_rotvec(np.pi * np.array(axis)).as_matrix()
-
+                    flip_matrix = np.eye(3) - 2 * np.outer(axis, axis) # Householder matrix for reflection
                     rot = np.dot(rot, flip_matrix)
                 # Flip the last column of the rotation matrix if the determinant is negative
 
