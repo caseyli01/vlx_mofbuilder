@@ -171,10 +171,11 @@ class net_optimizer:
             cell information of the template
         """
         template_cell_info, _, vvnode = extract_type_atoms_fcoords_in_primitive_cell(
-            template_cif, "V"
-        )
-        _, _, eenode = extract_type_atoms_fcoords_in_primitive_cell(template_cif, "E")
-        _, _, ecnode = extract_type_atoms_fcoords_in_primitive_cell(template_cif, "EC")
+            template_cif, "V")
+        _, _, eenode = extract_type_atoms_fcoords_in_primitive_cell(
+            template_cif, "E")
+        _, _, ecnode = extract_type_atoms_fcoords_in_primitive_cell(
+            template_cif, "EC")
         unit_cell = extract_unit_cell(template_cell_info)
 
         vvnode = np.unique(np.array(vvnode, dtype=float), axis=0)
@@ -202,9 +203,9 @@ class net_optimizer:
             cif file of the template, including only V and E nodes info in primitive cell
         """
         template_cell_info, _, vvnode = extract_type_atoms_fcoords_in_primitive_cell(
-            template_cif, "V"
-        )
-        _, _, eenode = extract_type_atoms_fcoords_in_primitive_cell(template_cif, "E")
+            template_cif, "V")
+        _, _, eenode = extract_type_atoms_fcoords_in_primitive_cell(
+            template_cif, "E")
         unit_cell = extract_unit_cell(template_cell_info)
 
         vvnode = np.unique(np.array(vvnode, dtype=float), axis=0)
@@ -212,9 +213,10 @@ class net_optimizer:
         ##loop over super333xxnode and super333yynode to find the pair of x node in unicell which pass through the yynode
         vvnode333 = make_supercell_3x3x3(vvnode)
         eenode333 = make_supercell_3x3x3(eenode)
-        _, _, G = find_pair_v_e(
-            vvnode333, eenode333, unit_cell, distance_range=pair_v_e_range
-        )
+        _, _, G = find_pair_v_e(vvnode333,
+                                eenode333,
+                                unit_cell,
+                                distance_range=pair_v_e_range)
         G = add_ccoords(G, unit_cell)
         G, self.node_max_degree = set_DV_V(G)
         self.G = set_DE_E(G)
@@ -234,9 +236,9 @@ class net_optimizer:
         self.node_cif = node_cif
         self.node_target_type = node_target_type
         self.node_unit_cell, self.node_atom, self.node_x_fcoords, self.node_fcoords = (
-            process_node(node_cif, node_target_type)
-        )
-        self.node_x_ccoords = np.dot(self.node_unit_cell, self.node_x_fcoords.T).T
+            process_node(node_cif, node_target_type))
+        self.node_x_ccoords = np.dot(self.node_unit_cell,
+                                     self.node_x_fcoords.T).T
         self.node_coords = np.dot(self.node_unit_cell, self.node_fcoords.T).T
 
     def _linker_info(self, linker_cif):
@@ -253,10 +255,10 @@ class net_optimizer:
             self.linker_x_fcoords,
             self.linker_fcoords,
         ) = process_node(linker_cif, "X")
-        self.linker_x_ccoords = np.dot(self.linker_unit_cell, self.linker_x_fcoords.T).T
-        self.linker_length = np.linalg.norm(
-            self.linker_x_ccoords[0] - self.linker_x_ccoords[1]
-        )
+        self.linker_x_ccoords = np.dot(self.linker_unit_cell,
+                                       self.linker_x_fcoords.T).T
+        self.linker_length = np.linalg.norm(self.linker_x_ccoords[0] -
+                                            self.linker_x_ccoords[1])
         linker_ccoords = np.dot(self.linker_unit_cell, self.linker_fcoords.T).T
         self.linker_ccoords = linker_ccoords - np.mean(linker_ccoords, axis=0)
 
@@ -269,8 +271,7 @@ class net_optimizer:
         """
         self.linker_center_cif = linker_center_cif
         self.ec_unit_cell, self.ec_atom, self.ec_x_vecs, self.ec_fcoords = process_node(
-            self.linker_center_cif, "X"
-        )
+            self.linker_center_cif, "X")
         self.ec_xcoords = np.dot(self.ec_unit_cell, self.ec_x_vecs.T).T
         self.eccoords = np.dot(self.ec_unit_cell, self.ec_fcoords.T).T
 
@@ -298,11 +299,9 @@ class net_optimizer:
         """
         self.linker_pdb = linker_pdb
         self.linker_atom, self.linker_ccoords, self.linker_x_ccoords = process_node_pdb(
-            linker_pdb, "X"
-        )
-        self.linker_length = np.linalg.norm(
-            self.linker_x_ccoords[0] - self.linker_x_ccoords[1]
-        )
+            linker_pdb, "X")
+        self.linker_length = np.linalg.norm(self.linker_x_ccoords[0] -
+                                            self.linker_x_ccoords[1])
 
     def linker_center_info(self, linker_center_pdb):
         """
@@ -313,8 +312,7 @@ class net_optimizer:
         """
         self.linker_center_pdb = linker_center_pdb
         self.ec_atom, self.ec_ccoords, self.ec_x_ccoords = process_node_pdb(
-            linker_center_pdb, "X"
-        )
+            linker_center_pdb, "X")
 
     def _linker_center(self, linker_center_pdb):
         """
@@ -326,8 +324,7 @@ class net_optimizer:
 
         self.linker_center_pdb = linker_center_pdb
         self.ec_atom, self.ec_ccoords, self.ec_x_ccoords = process_node_pdb(
-            linker_center_pdb, "X"
-        )  # com type could be another
+            linker_center_pdb, "X")  # com type could be another
 
     def set_constant_length(self, constant_length):
         """
@@ -382,7 +379,9 @@ class net_optimizer:
         use the saved optimized rotations from the previous optimization
         """
         self.saved_optimized_rotations = optimized_rotations
-        print("load the saved optimized_rotations from the previous optimization")
+        print(
+            "load the saved optimized_rotations from the previous optimization"
+        )
 
     def to_save_optimized_rotations(self, filename):
         """
@@ -391,8 +390,7 @@ class net_optimizer:
         self.to_save_optimized_rotations_filename = filename
 
     def use_saved_rotations_as_initial_guess(
-        self, use_saved_rotations_as_initial_guess
-    ):
+            self, use_saved_rotations_as_initial_guess):
         """
         use the saved optimized rotations as initial guess
         """
@@ -467,27 +465,23 @@ class net_optimizer:
         for n in sorted_nodes:
             if "CV" in n:
                 Xatoms_positions_dict[sorted_nodes.index(n)] = addidx(
-                    G.nodes[n]["ccoords"] + ec_x_ccoords
-                )
+                    G.nodes[n]["ccoords"] + ec_x_ccoords)
             else:
                 Xatoms_positions_dict[sorted_nodes.index(n)] = addidx(
-                    G.nodes[n]["ccoords"] + node_xcoords
-                )
+                    G.nodes[n]["ccoords"] + node_xcoords)
 
         for n in sorted_nodes:
             if "CV" in n:
                 node_positions_dict[sorted_nodes.index(n)] = (
-                    G.nodes[n]["ccoords"] + ecoords
-                )
+                    G.nodes[n]["ccoords"] + ecoords)
             else:
                 node_positions_dict[sorted_nodes.index(n)] = (
-                    G.nodes[n]["ccoords"] + node_coords
-                )
+                    G.nodes[n]["ccoords"] + node_coords)
 
         # reindex the edges in the G with the index in the sorted_nodes
-        sorted_edges_of_sortednodeidx = [
-            (sorted_nodes.index(e[0]), sorted_nodes.index(e[1])) for e in sorted_edges
-        ]
+        sorted_edges_of_sortednodeidx = [(sorted_nodes.index(e[0]),
+                                          sorted_nodes.index(e[1]))
+                                         for e in sorted_edges]
 
         # Optimize rotations
         num_nodes = G.number_of_nodes()
@@ -500,10 +494,12 @@ class net_optimizer:
             }
         for i, node in enumerate(sorted_nodes):
             pname_set_dict[pname(node)]["ind_ofsortednodes"].append(i)
-            if len(pname_set_dict[pname(node)]["ind_ofsortednodes"]) == 1:  # first node
-                pname_set_dict[pname(node)]["rot_trans"] = get_rot_trans_matrix(
-                    node, G, sorted_nodes, Xatoms_positions_dict
-                )  # initial guess
+            if len(pname_set_dict[pname(node)]
+                   ["ind_ofsortednodes"]) == 1:  # first node
+                pname_set_dict[pname(
+                    node)]["rot_trans"] = get_rot_trans_matrix(
+                        node, G, sorted_nodes,
+                        Xatoms_positions_dict)  # initial guess
         self.pname_set_dict = pname_set_dict
 
         for p_name in pname_set_dict:
@@ -511,19 +507,13 @@ class net_optimizer:
             for k in pname_set_dict[p_name]["ind_ofsortednodes"]:
                 node = sorted_nodes[k]
 
-                Xatoms_positions_dict[k][:, 1:] = (
-                    np.dot(
-                        Xatoms_positions_dict[k][:, 1:] - G.nodes[node]["ccoords"],
-                        rot,
-                    )
-                    + trans
-                    + G.nodes[node]["ccoords"]
-                )
-                node_positions_dict[k] = (
-                    np.dot(node_positions_dict[k] - G.nodes[node]["ccoords"], rot)
-                    + trans
-                    + G.nodes[node]["ccoords"]
-                )
+                Xatoms_positions_dict[k][:, 1:] = (np.dot(
+                    Xatoms_positions_dict[k][:, 1:] - G.nodes[node]["ccoords"],
+                    rot,
+                ) + trans + G.nodes[node]["ccoords"])
+                node_positions_dict[k] = (np.dot(
+                    node_positions_dict[k] - G.nodes[node]["ccoords"], rot) +
+                                          trans + G.nodes[node]["ccoords"])
         ###3D free rotation
         if not hasattr(self, "saved_optimized_rotations"):
             print("-" * 80)
@@ -540,9 +530,8 @@ class net_optimizer:
             ##    initial_rots
             ##).flatten()  # Initial guess for rotation matrices
 
-            initial_guess_set_rotations = (
-                np.eye(3, 3).reshape(1, 3, 3).repeat(len(pname_set), axis=0)
-            )
+            initial_guess_set_rotations = (np.eye(3, 3).reshape(
+                1, 3, 3).repeat(len(pname_set), axis=0))
 
             ####TODO: modified for mil53
             (
@@ -602,12 +591,12 @@ class net_optimizer:
                 if self.use_saved_rotations_as_initial_guess:
                     print("use the saved optimized_rotations as initial guess")
                     print("-" * 80)
-                    print(" " * 20, "start to optimize the rotations", " " * 20)
+                    print(" " * 20, "start to optimize the rotations",
+                          " " * 20)
                     print("-" * 80)
 
                     saved_set_rotations = self.saved_optimized_rotations.reshape(
-                        -1, 3, 3
-                    )
+                        -1, 3, 3)
                     # (
                     #    optimized_rotations_pre,
                     #    _,
@@ -646,7 +635,8 @@ class net_optimizer:
                         iprint=self.iprint,
                     )
                     print("-" * 80)
-                    print(" " * 20, "rotations optimization completed", " " * 20)
+                    print(" " * 20, "rotations optimization completed",
+                          " " * 20)
                     print("-" * 80)
                     # to save the optimized rotations as npy
                     if hasattr(self, "to_save_optimized_rotations_filename"):
@@ -661,25 +651,22 @@ class net_optimizer:
 
                 else:
                     optimized_set_rotations = self.saved_optimized_rotations.reshape(
-                        -1, 3, 3
-                    )
+                        -1, 3, 3)
 
             else:
                 print(
                     "use the loaded optimized_rotations from the previous optimization"
                 )
                 optimized_set_rotations = self.saved_optimized_rotations.reshape(
-                    -1, 3, 3
-                )
+                    -1, 3, 3)
         from _node_rotation_matrix_optimizer import expand_setrots
 
-        optimized_rotations = expand_setrots(
-            pname_set_dict, optimized_set_rotations, sorted_nodes
-        )
+        optimized_rotations = expand_setrots(pname_set_dict,
+                                             optimized_set_rotations,
+                                             sorted_nodes)
         # Apply rotations
         rotated_node_positions = apply_rotations_to_atom_positions(
-            optimized_rotations, G, sorted_nodes, node_positions_dict
-        )
+            optimized_rotations, G, sorted_nodes, node_positions_dict)
 
         # Save results to XYZ
         # save_xyz("optimized_nodesstructure.xyz", rotated_node_positions) #DEBUG
@@ -691,10 +678,10 @@ class net_optimizer:
                 sorted_nodes,
                 sorted_edges_of_sortednodeidx,
                 Xatoms_positions_dict,
-            )
-        )
+            ))
 
-        start_node = sorted_edges[0][0]  # find_nearest_node_to_beginning_point(G)
+        start_node = sorted_edges[0][
+            0]  # find_nearest_node_to_beginning_point(G)
         # loop all of the edges in G and get the lengths of the edges, length is the distance between the two nodes ccoords
         edge_lengths, lengths = get_edge_lengths(G)
 
@@ -703,12 +690,15 @@ class net_optimizer:
         # update the node ccoords in G by loop edge, start from the start_node, and then update the connected node ccoords by the edge length, and update the next node ccords from the updated node
 
         updated_ccoords, original_ccoords = update_node_ccoords(
-            G, edge_lengths, start_node, new_edge_length
-        )
+            G, edge_lengths, start_node, new_edge_length)
         # exclude the start_node in updated_ccoords and original_ccoords
-        updated_ccoords = {k: v for k, v in updated_ccoords.items() if k != start_node}
+        updated_ccoords = {
+            k: v
+            for k, v in updated_ccoords.items() if k != start_node
+        }
         original_ccoords = {
-            k: v for k, v in original_ccoords.items() if k != start_node
+            k: v
+            for k, v in original_ccoords.items() if k != start_node
         }
 
         # use optimized_params to update all of nodes ccoords in G, according to the fccoords
@@ -717,8 +707,7 @@ class net_optimizer:
             print(" " * 20, "start to optimize the cell parameters", " " * 20)
             print("-" * 80)
             optimized_params = optimize_cell_parameters(
-                self.cell_info, original_ccoords, updated_ccoords
-            )
+                self.cell_info, original_ccoords, updated_ccoords)
             print("-" * 80)
             print(" " * 20, "cell parameters optimization completed", " " * 20)
             print("-" * 80)
@@ -736,57 +725,43 @@ class net_optimizer:
         )
         sc_unit_cell_inv = np.linalg.inv(sc_unit_cell)
         sG, scaled_ccoords = update_ccoords_by_optimized_cell_params(
-            self.G, optimized_params
-        )
+            self.G, optimized_params)
         scaled_node_positions_dict = {}
         scaled_Xatoms_positions_dict = {}
 
         for n in sorted_nodes:
             if "CV" in n:
                 scaled_Xatoms_positions_dict[sorted_nodes.index(n)] = addidx(
-                    sG.nodes[n]["ccoords"] + ec_x_ccoords
-                )
+                    sG.nodes[n]["ccoords"] + ec_x_ccoords)
             else:
                 scaled_Xatoms_positions_dict[sorted_nodes.index(n)] = addidx(
-                    sG.nodes[n]["ccoords"] + node_xcoords
-                )
+                    sG.nodes[n]["ccoords"] + node_xcoords)
 
         for n in sorted_nodes:
             if "CV" in n:
                 scaled_node_positions_dict[sorted_nodes.index(n)] = (
-                    sG.nodes[n]["ccoords"] + ecoords
-                )
+                    sG.nodes[n]["ccoords"] + ecoords)
             else:
                 scaled_node_positions_dict[sorted_nodes.index(n)] = (
-                    sG.nodes[n]["ccoords"] + node_coords
-                )
+                    sG.nodes[n]["ccoords"] + node_coords)
 
         # Apply rotations
         for p_name in pname_set_dict:
             rot, trans = pname_set_dict[p_name]["rot_trans"]
             for k in pname_set_dict[p_name]["ind_ofsortednodes"]:
                 node = sorted_nodes[k]
-                scaled_Xatoms_positions_dict[k][:, 1:] = (
-                    np.dot(
-                        scaled_Xatoms_positions_dict[k][:, 1:]
-                        - sG.nodes[node]["ccoords"],
-                        rot,
-                    )
-                    + trans
-                    + sG.nodes[node]["ccoords"]
-                )
+                scaled_Xatoms_positions_dict[k][:, 1:] = (np.dot(
+                    scaled_Xatoms_positions_dict[k][:, 1:] -
+                    sG.nodes[node]["ccoords"],
+                    rot,
+                ) + trans + sG.nodes[node]["ccoords"])
 
-                scaled_node_positions_dict[k] = (
-                    np.dot(
-                        scaled_node_positions_dict[k] - sG.nodes[node]["ccoords"], rot
-                    )
-                    + trans
-                    + sG.nodes[node]["ccoords"]
-                )
+                scaled_node_positions_dict[k] = (np.dot(
+                    scaled_node_positions_dict[k] - sG.nodes[node]["ccoords"],
+                    rot) + trans + sG.nodes[node]["ccoords"])
 
         scaled_rotated_node_positions = apply_rotations_to_atom_positions(
-            optimized_rotations, sG, sorted_nodes, scaled_node_positions_dict
-        )
+            optimized_rotations, sG, sorted_nodes, scaled_node_positions_dict)
         scaled_rotated_Xatoms_positions, optimized_pair = (
             apply_rotations_to_Xatoms_positions(
                 optimized_rotations,
@@ -794,8 +769,7 @@ class net_optimizer:
                 sorted_nodes,
                 sorted_edges_of_sortednodeidx,
                 scaled_Xatoms_positions_dict,
-            )
-        )
+            ))
         # Save results to XYZ
 
         self.sorted_nodes = sorted_nodes
@@ -850,44 +824,45 @@ class net_optimizer:
             x_j = scaled_rotated_Xatoms_positions[reindex_j][x_idx_j][1:]
             x_i_x_j_middle_point = np.mean([x_i, x_j], axis=0)
             xx_vector = np.vstack(
-                [x_i - x_i_x_j_middle_point, x_j - x_i_x_j_middle_point]
-            )
+                [x_i - x_i_x_j_middle_point, x_j - x_i_x_j_middle_point])
             norm_xx_vector = xx_vector / np.linalg.norm(xx_vector)
 
             # print(i, j, reindex_i, reindex_j, x_idx_i, x_idx_j)
             # use superimpose to get the rotation matrix
             # use record to record the rotation matrix for get rid of the repeat calculation
             indices = [
-                index
-                for index, value in enumerate(norm_xx_vector_record)
+                index for index, value in enumerate(norm_xx_vector_record)
                 if is_list_A_in_B(norm_xx_vector, value)
             ]
             if len(indices) == 1:
                 rot = rot_record[indices[0]]
                 # rot = reorthogonalize_matrix(rot)
             else:
-                _, rot, _ = superimpose_rotation_only(extended_linker_xx_vec, xx_vector)
+                _, rot, _ = superimpose_rotation_only(extended_linker_xx_vec,
+                                                      xx_vector)
                 # rot = reorthogonalize_matrix(rot)
                 norm_xx_vector_record.append(norm_xx_vector)
                 # the rot may be opposite, so we need to check the angle between the two vectors
                 # if the angle is larger than 90 degree, we need to reverse the rot
                 roted_xx = np.dot(extended_linker_xx_vec, rot)
 
-                if np.dot(roted_xx[1] - roted_xx[0], xx_vector[1] - xx_vector[0]) < 0:
+                if np.dot(roted_xx[1] - roted_xx[0],
+                          xx_vector[1] - xx_vector[0]) < 0:
                     ##rotate 180 around the axis of the cross product of the two vectors
-                    axis = np.cross(
-                        roted_xx[1] - roted_xx[0], xx_vector[1] - xx_vector[0]
-                    )
+                    axis = np.cross(roted_xx[1] - roted_xx[0],
+                                    xx_vector[1] - xx_vector[0])
                     # if 001 not linear to the two vectors
                     if np.linalg.norm(axis) == 0:
-                        check_z_axis = np.cross(roted_xx[1] - roted_xx[0], [0, 0, 1])
+                        check_z_axis = np.cross(roted_xx[1] - roted_xx[0],
+                                                [0, 0, 1])
                         if np.linalg.norm(check_z_axis) == 0:
                             axis = np.array([1, 0, 0])
                         else:
                             axis = np.array([0, 0, 1])
 
                     axis = axis / np.linalg.norm(axis)
-                    flip_matrix = np.eye(3) - 2 * np.outer(axis, axis) # Householder matrix for reflection
+                    flip_matrix = np.eye(3) - 2 * np.outer(
+                        axis, axis)  # Householder matrix for reflection
                     rot = np.dot(rot, flip_matrix)
                 # Flip the last column of the rotation matrix if the determinant is negative
 
@@ -896,24 +871,21 @@ class net_optimizer:
             # use the rotation matrix to rotate the linker x coords
             # rotated_xx = np.dot(extended_linker_xx_vec, rot)
             # print(rotated_xx,'rotated_xx',xx_vector) #DEBUG
-            placed_edge_ccoords = (
-                np.dot(self.linker_ccoords, rot) + x_i_x_j_middle_point
-            )
+            placed_edge_ccoords = (np.dot(self.linker_ccoords, rot) +
+                                   x_i_x_j_middle_point)
 
-            placed_edge = np.hstack((np.asarray(self.linker_atom), placed_edge_ccoords))
+            placed_edge = np.hstack(
+                (np.asarray(self.linker_atom), placed_edge_ccoords))
             sG.edges[(i, j)]["coords"] = x_i_x_j_middle_point
             sG.edges[(i, j)]["c_points"] = placed_edge
 
-            sG.edges[(i, j)]["f_points"] = np.hstack(
-                (
-                    placed_edge[:, 0:2],
-                    cartesian_to_fractional(placed_edge[:, 2:5], sc_unit_cell_inv),
-                )
-            )  # NOTE: modified add the atom type and atom name
+            sG.edges[(i, j)]["f_points"] = np.hstack((
+                placed_edge[:, 0:2],
+                cartesian_to_fractional(placed_edge[:, 2:5], sc_unit_cell_inv),
+            ))  # NOTE: modified add the atom type and atom name
 
             _, sG.edges[(i, j)]["x_coords"] = fetch_X_atoms_ind_array(
-                placed_edge, 0, "X"
-            )
+                placed_edge, 0, "X")
             # edges[(i,j)]=placed_edge
         # placed_node = {}
         for k, v in scaled_rotated_node_positions.items():
@@ -921,12 +893,10 @@ class net_optimizer:
             # placed_node[k] = np.hstack((nodes_atom[k],v))
             sG.nodes[k]["c_points"] = np.hstack((nodes_atom[k], v))
             sG.nodes[k]["f_points"] = np.hstack(
-                (nodes_atom[k], cartesian_to_fractional(v, sc_unit_cell_inv))
-            )
+                (nodes_atom[k], cartesian_to_fractional(v, sc_unit_cell_inv)))
             # find the atoms starts with "x" and extract the coordinates
             _, sG.nodes[k]["x_coords"] = fetch_X_atoms_ind_array(
-                sG.nodes[k]["c_points"], 0, "X"
-            )
+                sG.nodes[k]["c_points"], 0, "X")
         self.sG = sG
         return sG
 
@@ -950,12 +920,11 @@ class net_optimizer:
         # )
         self.prim_multiedge_bundlings = self.multiedge_bundlings
         self.super_multiedge_bundlings = make_super_multiedge_bundlings(
-            self.prim_multiedge_bundlings, self.supercell
-        )
-        superG = update_supercell_bundle(superG, self.super_multiedge_bundlings)
+            self.prim_multiedge_bundlings, self.supercell)
+        superG = update_supercell_bundle(superG,
+                                         self.super_multiedge_bundlings)
         superG = check_multiedge_bundlings_insuperG(
-            self.super_multiedge_bundlings, superG
-        )
+            self.super_multiedge_bundlings, superG)
         self.superG = superG
         return superG
 
@@ -1023,8 +992,7 @@ class net_optimizer:
     def add_xoo_to_edge_multitopic(self):
         eG = self.eG
         eG, unsaturated_linker, matched_vnode_xind, xoo_dict = addxoo2edge_multitopic(
-            eG, self.sc_unit_cell
-        )
+            eG, self.sc_unit_cell)
         self.unsaturated_linker = unsaturated_linker
         self.matched_vnode_xind = matched_vnode_xind
         self.xoo_dict = xoo_dict
@@ -1047,8 +1015,7 @@ class net_optimizer:
         """
         eG = self.eG
         eG, unsaturated_linker, matched_vnode_xind, xoo_dict = addxoo2edge_ditopic(
-            eG, self.sc_unit_cell
-        )
+            eG, self.sc_unit_cell)
         self.unsaturated_linker = unsaturated_linker
         self.matched_vnode_xind = matched_vnode_xind
         self.xoo_dict = xoo_dict
@@ -1060,8 +1027,10 @@ class net_optimizer:
         only keep the main fragment of the target MOF cell, remove the other fragments, to avoid the disconnected fragments
         """
         eG = self.eG
-        self.eG = [eG.subgraph(c).copy() for c in nx.connected_components(eG)][0]
-        print("main fragment of the MOF cell is kept")  # ,len(self.eG.nodes()),'nodes')
+        self.eG = [eG.subgraph(c).copy()
+                   for c in nx.connected_components(eG)][0]
+        print("main fragment of the MOF cell is kept"
+              )  # ,len(self.eG.nodes()),'nodes')
         # print('fragment size list:',[len(c) for c in nx.connected_components(eG)]) #debug
         return self.eG
 
@@ -1073,26 +1042,23 @@ class net_optimizer:
         removed_nodes = []
         for n in eG.nodes():
             if pname(n) != "EDGE":
-                if check_supercell_box_range(
-                    eG.nodes[n]["fcoords"], supercell, buffer_plus, buffer_minus
-                ):
+                if check_supercell_box_range(eG.nodes[n]["fcoords"], supercell,
+                                             buffer_plus, buffer_minus):
                     pass
                 else:
                     new_eG.remove_node(n)
                     removed_nodes.append(n)
             elif pname(n) == "EDGE":
-                if (
-                    arr_dimension(eG.nodes[n]["fcoords"]) == 2
-                ):  # ditopic linker have two points in the fcoords
+                if (arr_dimension(eG.nodes[n]["fcoords"]) == 2
+                    ):  # ditopic linker have two points in the fcoords
                     edge_coords = np.mean(eG.nodes[n]["fcoords"], axis=0)
                 elif (
-                    arr_dimension(eG.nodes[n]["fcoords"]) == 1
+                        arr_dimension(eG.nodes[n]["fcoords"]) == 1
                 ):  # multitopic linker have one point in the fcoords from EC
                     edge_coords = eG.nodes[n]["fcoords"]
 
-                if check_supercell_box_range(
-                    edge_coords, supercell, buffer_plus, buffer_minus
-                ):
+                if check_supercell_box_range(edge_coords, supercell,
+                                             buffer_plus, buffer_minus):
                     pass
                 else:
                     new_eG.remove_node(n)
@@ -1166,7 +1132,9 @@ class net_optimizer:
         use the node terminations to add terminations to the unsaturated nodes
 
         """
-        unsaturated_node = [n for n in self.unsaturated_node if n in self.eG.nodes()]
+        unsaturated_node = [
+            n for n in self.unsaturated_node if n in self.eG.nodes()
+        ]
         xoo_dict = self.xoo_dict
         matched_vnode_xind = self.matched_vnode_xind
         eG = self.eG
@@ -1175,9 +1143,9 @@ class net_optimizer:
             unsaturated_vnode_xind_dict,
             unsaturated_vnode_xoo_dict,
             self.matched_vnode_xind_dict,
-        ) = make_unsaturated_vnode_xoo_dict(
-            unsaturated_node, xoo_dict, matched_vnode_xind, eG, sc_unit_cell
-        )
+        ) = make_unsaturated_vnode_xoo_dict(unsaturated_node, xoo_dict,
+                                            matched_vnode_xind, eG,
+                                            sc_unit_cell)
         # term_file: path to the termination file
         # ex_node_cxo_cc: exposed node coordinates
 
@@ -1186,16 +1154,15 @@ class net_optimizer:
             eG.nodes[n]["term_c_points"] = {}
         for exvnode_xind_key in unsaturated_vnode_xoo_dict.keys():
             exvnode_x_ccoords = unsaturated_vnode_xoo_dict[exvnode_xind_key][
-                "x_cpoints"
-            ]
+                "x_cpoints"]
             exvnode_oo_ccoords = unsaturated_vnode_xoo_dict[exvnode_xind_key][
-                "oo_cpoints"
-            ]
-            node_xoo_ccoords = np.vstack([exvnode_x_ccoords, exvnode_oo_ccoords])
+                "oo_cpoints"]
+            node_xoo_ccoords = np.vstack(
+                [exvnode_x_ccoords, exvnode_oo_ccoords])
             # make the beginning point of the termination to the center of the oo atoms
             node_oo_center_cvec = np.mean(
-                exvnode_oo_ccoords[:, 2:5].astype(float), axis=0
-            )  # NOTE: modified add the atom type and atom name
+                exvnode_oo_ccoords[:, 2:5].astype(float),
+                axis=0)  # NOTE: modified add the atom type and atom name
             node_xoo_cvecs = (
                 node_xoo_ccoords[:, 2:5].astype(float) - node_oo_center_cvec
             )  # NOTE: modified add the atom type and atom name
@@ -1203,8 +1170,7 @@ class net_optimizer:
             # use record to record the rotation matrix for get rid of the repeat calculation
 
             indices = [
-                index
-                for index, value in enumerate(node_oovecs_record)
+                index for index, value in enumerate(node_oovecs_record)
                 if is_list_A_in_B(node_xoo_cvecs, value[0])
             ]
             if len(indices) == 1:
@@ -1212,21 +1178,18 @@ class net_optimizer:
             else:
                 _, rot, _ = superimpose(self.term_xoovecs, node_xoo_cvecs)
                 node_oovecs_record.append((node_xoo_cvecs, rot))
-            adjusted_term_vecs = np.dot(self.term_coords, rot) + node_oo_center_cvec
-            adjusted_term = np.hstack(
-                (
-                    np.asarray(self.term_info[:, 0:1]),
-                    np.asarray(self.term_info[:, 2:3]),
-                    adjusted_term_vecs,
-                )
-            )
+            adjusted_term_vecs = np.dot(self.term_coords,
+                                        rot) + node_oo_center_cvec
+            adjusted_term = np.hstack((
+                np.asarray(self.term_info[:, 0:1]),
+                np.asarray(self.term_info[:, 2:3]),
+                adjusted_term_vecs,
+            ))
             # add the adjusted term to the terms, add index, add the node name
-            unsaturated_vnode_xoo_dict[exvnode_xind_key]["node_term_c_points"] = (
-                adjusted_term
-            )
-            eG.nodes[exvnode_xind_key[0]]["term_c_points"][exvnode_xind_key[1]] = (
-                adjusted_term
-            )
+            unsaturated_vnode_xoo_dict[exvnode_xind_key][
+                "node_term_c_points"] = (adjusted_term)
+            eG.nodes[exvnode_xind_key[0]]["term_c_points"][
+                exvnode_xind_key[1]] = (adjusted_term)
 
         self.unsaturated_vnode_xoo_dict = unsaturated_vnode_xoo_dict
         self.eG = eG
@@ -1247,7 +1210,9 @@ class net_optimizer:
         for n in eG.nodes():
             if pname(n) != "EDGE":
                 all_f_points = eG.nodes[n]["f_points"]
-                noxoo_f_points = np.delete(all_f_points, all_xoo_indices, axis=0)
+                noxoo_f_points = np.delete(all_f_points,
+                                           all_xoo_indices,
+                                           axis=0)
                 eG.nodes[n]["noxoo_f_points"] = noxoo_f_points
         self.eG = eG
 
@@ -1259,11 +1224,10 @@ class net_optimizer:
         """
 
         nodes_eG, edges_eG, terms_eG, node_res_num, edge_res_num, term_res_num = (
-            extract_node_edge_term(self.eG, self.sc_unit_cell)
-        )
-        merged_node_edge_term = merge_node_edge_term(
-            nodes_eG, edges_eG, terms_eG, node_res_num, edge_res_num
-        )
+            extract_node_edge_term(self.eG, self.sc_unit_cell))
+        merged_node_edge_term = merge_node_edge_term(nodes_eG, edges_eG,
+                                                     terms_eG, node_res_num,
+                                                     edge_res_num)
         save_node_edge_term_gro(merged_node_edge_term, gro_name)
         print(str(gro_name) + ".gro is saved")
         print("node_res_num: ", node_res_num)
@@ -1277,7 +1241,8 @@ class net_optimizer:
         self.edge_res_num = edge_res_num
         self.term_res_num = term_res_num
         self.merged_node_edge_term = merged_node_edge_term
-        def get_node_edge_term_grolines(self, eG, sc_unit_cell):
+
+    def get_node_edge_term_grolines(self, eG, sc_unit_cell):
         nodes_eG, edges_eG, terms_eG, node_res_num, edge_res_num, term_res_num = (
             extract_node_edge_term(eG, sc_unit_cell))
         merged_node_edge_term = merge_node_edge_term(nodes_eG, edges_eG,
@@ -1310,7 +1275,6 @@ class net_optimizer:
         print(str(gro_name) + ".gro is saved in folder " + str(dir_name))
 
         self.merged_node_edge_term = merged_node_edge_term
-
 
 
 if __name__ == "__main__":
